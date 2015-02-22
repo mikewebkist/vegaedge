@@ -1,6 +1,6 @@
 
 
-byte graycount[8][3] PROGMEM = {
+const byte graycount[8][3] PROGMEM = {
     {0,0,0},
     {0,0,1},
     {0,1,1},
@@ -11,7 +11,7 @@ byte graycount[8][3] PROGMEM = {
     {1,0,0}
 };
 
-byte chasing[256][3] PROGMEM = {
+const byte chasing[256][3] PROGMEM = {
     {168, 0, 0}, 
     {168, 0, 0}, 
     {168, 0, 0}, 
@@ -301,8 +301,9 @@ void doFlashing(int flash_type) {
 
     else if (flash_type == 2) { softNoise(); }
     else if (flash_type == 3) { fireflies(); }
-    // else if (flash_type == 4) { gaussRise(); }
-    else if (flash_type == 4) { grayCount(); }
+    else if (flash_type == 4) { gaussRise(); }
+    else if (flash_type == 5) { binaryCount(); }
+    else if (flash_type == 6) { grayCount(); }
 
 
 }
@@ -418,13 +419,33 @@ void gaussRise() {
 
 void grayCount() {
     static int frameStep = 0;
-    static int counter;
-    counter = millis() % 500;
-    if (counter == 0) {
-	currentLEDvalue[0] = pgm_read_byte(&graycount[frameStep][0]) * (1 << 3);
-	currentLEDvalue[1] = pgm_read_byte(&graycount[frameStep][1]) * (1 << 3);
-	currentLEDvalue[2] = pgm_read_byte(&graycount[frameStep][2]) * (1 << 3);
+    static int nextIncrement = 250;
+    static int nextTime = 0;
+    static int timeNow;
+    
+    timeNow = millis();
+    if ((timeNow - nextTime) > nextIncrement) {
+	currentLEDvalue[0] = pgm_read_byte(&graycount[frameStep][0]) * fashionBrightness;
+	currentLEDvalue[1] = pgm_read_byte(&graycount[frameStep][1]) * fashionBrightness;
+	currentLEDvalue[2] = pgm_read_byte(&graycount[frameStep][2]) * fashionBrightness;
 	frameStep = (frameStep + 1) % 8;
+        nextTime = timeNow + nextIncrement;
+    }
+}
+
+void binaryCount() {
+    static int frameStep = 0;
+    static int nextIncrement = 250;
+    static int nextTime = 0;
+    static int timeNow;
+    
+    timeNow = millis();
+    if ((timeNow - nextTime) > nextIncrement) {
+	currentLEDvalue[0] = (frameStep & 1) * fashionBrightness;
+	currentLEDvalue[1] = ((frameStep >> 1) & 1) * fashionBrightness;
+	currentLEDvalue[2] = ((frameStep >> 2) & 1) * fashionBrightness;
+	frameStep = (frameStep + 1) % 8;
+        nextTime = timeNow + nextIncrement;
     }
 }
 
