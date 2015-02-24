@@ -1,16 +1,4 @@
 
-
-const byte graycount[8][3] PROGMEM = {
-    {0,0,0},
-    {0,0,1},
-    {0,1,1},
-    {0,1,0},
-    {1,1,0},
-    {1,1,1},
-    {1,0,1},
-    {1,0,0}
-};
-
 const byte chasing[256][3] PROGMEM = {
     {168, 0, 0}, 
     {168, 0, 0}, 
@@ -418,33 +406,51 @@ void gaussRise() {
 }
 
 void grayCount() {
-    static int frameStep = 0;
+  // http://en.wikipedia.org/wiki/Gray_code
+    static byte n = 0;
+    static byte grayBits[] = { 0, 1, 0, 2 };
     static int nextIncrement = 250;
     static int nextTime = 0;
     static int timeNow;
     
     timeNow = millis();
     if ((timeNow - nextTime) > nextIncrement) {
-	currentLEDvalue[0] = pgm_read_byte(&graycount[frameStep][0]) * fashionBrightness;
-	currentLEDvalue[1] = pgm_read_byte(&graycount[frameStep][1]) * fashionBrightness;
-	currentLEDvalue[2] = pgm_read_byte(&graycount[frameStep][2]) * fashionBrightness;
-	frameStep = (frameStep + 1) % 8;
-        nextTime = timeNow + nextIncrement;
+      currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]] ? 0 : fashionBrightness;
+      n = ++n % 4;
+      nextTime = timeNow + nextIncrement;  
+    }
+}
+
+void johnsonCounter() {
+  // http://en.wikipedia.org/wiki/Ring_counter#Four-bit_ring_counter_sequences
+    static byte n = 0;
+    static int nextIncrement = 250;
+    static int nextTime = 0;
+    int timeNow;
+    
+    timeNow = millis();
+    if ((timeNow - nextTime) > nextIncrement) {
+      // Take LSB, flip it, move it to MSB, shift byte right 1 bit.
+      n = (n & 1 ^ 1) << 2 | n >> 1;
+      currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
+      currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
+      currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
+      nextTime = timeNow + nextIncrement;  
     }
 }
 
 void binaryCount() {
-    static int frameStep = 0;
+    static int n = 0;
     static int nextIncrement = 250;
     static int nextTime = 0;
     static int timeNow;
     
     timeNow = millis();
     if ((timeNow - nextTime) > nextIncrement) {
-	currentLEDvalue[0] = (frameStep & 1) * fashionBrightness;
-	currentLEDvalue[1] = ((frameStep >> 1) & 1) * fashionBrightness;
-	currentLEDvalue[2] = ((frameStep >> 2) & 1) * fashionBrightness;
-	frameStep = (frameStep + 1) % 8;
+	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
+	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
+	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
+	n = ++n % 8;
         nextTime = timeNow + nextIncrement;
     }
 }
