@@ -292,8 +292,7 @@ void doFlashing(int flash_type) {
     else if (flash_type == 4) { gaussRise(); }
     else if (flash_type == 5) { binaryCount(); }
     else if (flash_type == 6) { grayCount(); }
-
-
+    else if (flash_type == 7) { johnsonCounter(); }
 }
 
 
@@ -405,6 +404,22 @@ void gaussRise() {
 
 }
 
+void binaryCount() {
+    static int n = 0;
+    static int nextIncrement = 250;
+    static int nextTime = 0;
+    static int timeNow;
+    
+    timeNow = millis();
+    if ((timeNow - nextTime) > nextIncrement) {
+	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
+	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
+	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
+	n = ++n % 8;
+        nextTime = timeNow + nextIncrement;
+    }
+}
+
 void grayCount() {
   // http://en.wikipedia.org/wiki/Gray_code
     static byte n = 0;
@@ -436,22 +451,6 @@ void johnsonCounter() {
       currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
       currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
       nextTime = timeNow + nextIncrement;  
-    }
-}
-
-void binaryCount() {
-    static int n = 0;
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    static int timeNow;
-    
-    timeNow = millis();
-    if ((timeNow - nextTime) > nextIncrement) {
-	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
-	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
-	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
-	n = ++n % 8;
-        nextTime = timeNow + nextIncrement;
     }
 }
 
