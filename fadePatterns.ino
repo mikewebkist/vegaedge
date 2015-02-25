@@ -262,7 +262,7 @@ const byte chasing[256][3] PROGMEM = {
 
 
 void doFlashing(int flash_type) {
-    if (flash_type == 0) {      // Mackey special
+    if (flash_type == 3) {      // Mackey special
 	currentLEDvalue[1] = 0;
 	static int fadeDir = 1;
 
@@ -279,20 +279,20 @@ void doFlashing(int flash_type) {
 	delay(3);
     }
 
-    else if (flash_type == 1) {      // chasing     
+    else if (flash_type == 4) {      // chasing     
 	currentLEDvalue[0] = pgm_read_byte(&(chasing[frameStep][0]));
 	currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][1]));
 	currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][2]));
 	delay(3);
-	frameStep = (frameStep + 1)%256;  // reset! consider variable-length flash pattern, then 255 should be something else.   
+	frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.   
     }
 
-    else if (flash_type == 2) { softNoise(); }
-    else if (flash_type == 3) { fireflies(); }
-    else if (flash_type == 4) { gaussRise(); }
-    else if (flash_type == 5) { binaryCount(); }
-    else if (flash_type == 6) { grayCount(); }
-    else if (flash_type == 7) { johnsonCounter(); }
+    else if (flash_type == 5) { softNoise(); }
+    else if (flash_type == 6) { fireflies(); }
+    //else if (flash_type == 4) { gaussRise(); }
+    else if (flash_type == 7) { binaryCount(); }
+    else if (flash_type == 8) { grayCount(); }
+    else if (flash_type == 9) { johnsonCounter(); }
 }
 
 
