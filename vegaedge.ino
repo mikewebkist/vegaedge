@@ -26,9 +26,6 @@
  */
 
 
-
-
-
 // *** SLEEP CODE
 
 #include <avr/sleep.h>
@@ -67,10 +64,10 @@ const int transitionRate = 3;    // fade time transitioning between modes
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 9999;      // What state of the programme are we in?
+int state = -1;      // What state of the programme are we in?
+int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
-byte currentLEDvalue[3] = {
-  0,0,0};
+byte currentLEDvalue[3] = { 0,0,0};
 
 
 void setup() {
@@ -101,197 +98,70 @@ void loop() {
   analogWrite(ledPin1, doGamma(currentLEDvalue[1]));
   analogWrite(ledPin2, doGamma(currentLEDvalue[2]));
 
-
   // ASLEEP, woken up
-  if (state == 9999) {              
+  if (state == -1) {
     if (buttonState == HIGH) {     // button released, wait for second button click
       firstPressedTime = millis();
-      state = 100;
+      state++;
     }
   }
 
   // Double-click
-  else if (state == 100) {      // waiting for another click
+  else if (state == 0) { // waiting for another click
     int timeSinceFirstPress = millis() - firstPressedTime;
     if (timeSinceFirstPress > doubleClickThresh) { 
       goToSleep(); 
-    }    // double click didn't happen in time, go back to sleep         
-    if (buttonState == LOW) { 
-      state = 101; 
-    }    // button pressed
+    }    // double click didn't happen in time, go back to sleep
   }
-
-  else if (state == 101) {      // fade in, waiting for button release
-    if (buttonState == HIGH) {     // button relesaed
+  
+  if(state > -1 && buttonState == LOW) {
+    pressed = 1;
+  } else if(pressed == 1 && buttonState == HIGH) {
+    state++;
+    pressed = 0;
+    // The number of modes
+    if(state > 9) {
+      state = 99;
+    } else if(state > 2) { // Turn everthing off when switching to a blinking mode.
       currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
-      currentLEDvalue[1] = 0; 
-      currentLEDvalue[2] = 0; 
-      state = 1010;
-    } 
+      currentLEDvalue[1] = 0;
+      currentLEDvalue[2] = 0;
+    }
   }
-
+  
   // SAFETY SOLID
-  else if (state == 1010) {
-    if (currentLEDvalue[0] != safetyBrightness) { 
+  if (state == 1) {
+    if (currentLEDvalue[0] < safetyBrightness) { 
       currentLEDvalue[0]++; 
     }     // fade in to solidBrightness value
-    if (currentLEDvalue[1] != safetyBrightness) { 
+    if (currentLEDvalue[1] < safetyBrightness) { 
       currentLEDvalue[1]++; 
     }
-    if (currentLEDvalue[2] != safetyBrightness) { 
+    if (currentLEDvalue[2] < safetyBrightness) { 
       currentLEDvalue[2]++; 
     }
     delay(3);
-
-    if (buttonState == LOW) { 
-      state = 1020; 
-    }   // button pressed, change state
   }
-
-  // SAFETY SOLID, button pressed, wait for button release
-  else if (state == 1020) {
-    if (buttonState == HIGH) {    // button released, start flashing
-      firstPressedTime = millis();
-      state = 1030;
-    }
-  }
-
 
   // FASHION SOLID
-  else if (state == 1030) {
-    if (currentLEDvalue[0] != fashionBrightness) { 
+  else if (state == 2) {
+    if (currentLEDvalue[0] > fashionBrightness) { 
       currentLEDvalue[0]--; 
     }     // fade down to solidBrightness value
-    if (currentLEDvalue[1] != fashionBrightness) { 
+    if (currentLEDvalue[1] > fashionBrightness) { 
       currentLEDvalue[1]--; 
     }
-    if (currentLEDvalue[2] != fashionBrightness) { 
+    if (currentLEDvalue[2] > fashionBrightness) { 
       currentLEDvalue[2]--; 
     }
     delay(3);
-
-    if (buttonState == LOW) { 
-      state = 1040; 
-    }   // button pressed, change state
   }
-
-  // SAFETY SOLID, button pressed, wait for button release
-  else if (state == 1040) {
-    if (buttonState == HIGH) {    // button released, start flashing
-      firstPressedTime = millis();
-      state = 1050;
-    }
-  }
-
-
-
-  // FIRST FLASHING
-  else if (state == 1050) {
-    doFlashing(0);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1060; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1060) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1061;
-    }
-  }
-
-
-  // SECOND FLASHING
-  else if (state == 1061) {
-    doFlashing(1);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1062; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1062) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1063;
-    }
-  }
-
-  // THRID FLASHING
-  else if (state == 1063) {
-    doFlashing(2);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1064; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1064) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1065;
-    }
-  }
-
-  // FOURTH FLASHING
-  else if (state == 1065) {
-    doFlashing(3);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1066; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1066) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1067;
-    }
-  }
-
-  // FOURTH FLASHING
-  else if (state == 1067) {
-    doFlashing(4);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1068; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1068) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1070;
-    }
-  }
-  // FOURTH FLASHING
-  else if (state == 1070) {
-    doFlashing(5);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1071; 
-    }    // button pressed to turn off
-  }
-
-  // Waiting for button release
-  else if (state == 1071) {
-    if (buttonState == HIGH) {    // button released
-      firstPressedTime = millis();
-      state = 1080;
-    }
-  }
-
-
-  // LAST FLASHING
-  else if (state == 1080) {
-    doFlashing(6);      // flashing behaviour in the fadePatterns tab.
-    if (buttonState == LOW) { 
-      state = 1090; 
-    }    // button pressed to turn off
+  else if(state > 2 && state < 99) {
+    doFlashing(state);
   }
 
   // Waiting for button release to go to sleep
-  else if (state == 1090) { 
+  else if (state == 99) { 
     // linear fading
     if (currentLEDvalue[0] > 0) { 
       currentLEDvalue[0]--; 
@@ -304,8 +174,7 @@ void loop() {
     }
     delay(transitionRate);
 
-    int brightnessSum = currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2];
-    if ((brightnessSum == 0) && (buttonState == HIGH)) { 
+    if((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
       goToSleep(); 
     }       // go to sleep when the button's been released and fading is done
   }
@@ -334,7 +203,7 @@ void startupFlash() {
 
 void goToSleep(void)
 {
-  state = 9999;
+  state = -1;
   digitalWrite(ledPin0, LOW);
   digitalWrite(ledPin1, LOW);
   digitalWrite(ledPin2, LOW);
