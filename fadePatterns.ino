@@ -190,7 +190,7 @@ void grayCount() {
     static int timeNow;
     
     timeNow = millis();
-    if ((timeNow - nextTime) > nextIncrement) {
+    if (timeNow > nextTime) {
 	currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]] ? 0 : fashionBrightness;
 	n = ++n % 4;
 	nextTime = timeNow + nextIncrement;  
@@ -205,7 +205,7 @@ void johnsonCounter() {
     static int timeNow;
     
     timeNow = millis();
-    if ((timeNow - nextTime) > nextIncrement) {
+    if (timeNow > nextTime) {
 	// Take LSB, flip it, move it to MSB, shift byte right 1 bit.
 	n = (n & 1 ^ 1) << 2 | n >> 1;
 	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
