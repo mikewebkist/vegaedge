@@ -167,10 +167,10 @@ void gaussRise() {
 
 void binaryCount() {
     static int n = 0;
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    static int timeNow;
-
+    static unsigned long nextIncrement = 250;
+    static unsigned long nextTime = 0;
+    unsigned long timeNow;
+    
     timeNow = millis();
     if ((timeNow - nextTime) > nextIncrement) {
 	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
@@ -185,10 +185,10 @@ void grayCount() {
     // http://en.wikipedia.org/wiki/Gray_code
     static byte n = 0;
     static byte grayBits[] = { 0, 1, 0, 2 };
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    static int timeNow;
-
+    static unsigned long nextIncrement = 250;
+    static unsigned long nextTime = 0;
+    unsigned long timeNow;
+    
     timeNow = millis();
     if ((timeNow - nextTime) > nextIncrement) {
 	currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]] ? 0 : fashionBrightness;
@@ -200,10 +200,10 @@ void grayCount() {
 void johnsonCounter() {
     // http://en.wikipedia.org/wiki/Ring_counter#Four-bit_ring_counter_sequences
     static byte n = 0;
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    int timeNow;
-
+    static unsigned long nextIncrement = 250;
+    static unsigned long nextTime = 0;
+    unsigned long timeNow;
+    
     timeNow = millis();
     if ((timeNow - nextTime) > nextIncrement) {
 	// Take LSB, flip it, move it to MSB, shift byte right 1 bit.
