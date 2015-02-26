@@ -99,7 +99,7 @@ void softNoise() {
      */
 
     //int counter = (millis()/200)%3;
-    currentLEDvalue[(millis()/50)%3] = random(255);
+    currentLEDvalue[(millis()/100)%3] = random(255);
 }
 
 void softNoiseProper() {
@@ -169,10 +169,10 @@ void binaryCount() {
     static int n = 0;
     static int nextIncrement = 250;
     static int nextTime = 0;
-    static int timeNow;
+    int timeNow;
     
     timeNow = millis();
-    if ((timeNow - nextTime) > nextIncrement) {
+    if (timeNow > nextTime) {
 	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
 	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
 	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
@@ -187,11 +187,11 @@ void grayCount() {
     static byte grayBits[] = { 0, 1, 0, 2 };
     static int nextIncrement = 250;
     static int nextTime = 0;
-    static int timeNow;
+    int timeNow;
     
     timeNow = millis();
     if (timeNow > nextTime) {
-	currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]] ? 0 : fashionBrightness;
+	currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]]  == 0 ? fashionBrightness : 0;
 	n = ++n % 4;
 	nextTime = timeNow + nextIncrement;  
     }
@@ -202,7 +202,7 @@ void johnsonCounter() {
     static byte n = 0;
     static int nextIncrement = 100;
     static int nextTime = 0;
-    static int timeNow;
+    int timeNow;
     
     timeNow = millis();
     if (timeNow > nextTime) {
