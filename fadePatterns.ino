@@ -64,7 +64,7 @@ void doFlashing(int flash_type) {
     //else if (flash_type == 4) { gaussRise(); }
     else if (flash_type == 7) { binaryCount(); }
     else if (flash_type == 8) { grayCount(); }
-    else if (flash_type == 9) { johnsonCounter(); }
+    else if (flash_type == 9) { batteryLevel(); }
 }
 
 void strobe() {
@@ -89,6 +89,25 @@ void noise() {
     currentLEDvalue[2] = random(255);  
 }
 
+void batteryLevel() {
+  int level =  analogRead(voltPin);
+      // http://en.wikipedia.org/wiki/Ring_counter#Four-bit_ring_counter_sequences
+    static byte n = 0;
+    static int nextIncrement = 100;
+    static int nextTime = 0;
+    int timeNow;
+    
+    timeNow = millis();
+    if (timeNow > nextTime) {
+  // Take LSB, flip it, move it to MSB, shift byte right 1 bit.
+  n = (n & 1 ^ 1) << 2 | n >> 1;
+  currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
+  currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
+  currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
+  nextTime = timeNow + level;  
+    }
+
+}
 void softNoise() {
     /*
        50 fire-like flicker

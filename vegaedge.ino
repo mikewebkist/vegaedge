@@ -38,6 +38,7 @@ uint8_t mcucr1, mcucr2;
 const byte ledPin0 = 0;
 const byte ledPin2 = 1;
 const byte ledPin1 = 4;
+const byte voltPin = 3;
 const byte buttonPin = 2;
 
 
@@ -76,6 +77,7 @@ void setup() {
     pinMode(ledPin2, OUTPUT);
     pinMode(ledPin0, OUTPUT);
     pinMode(ledPin1, OUTPUT);
+    pinMode(voltPin, INPUT);
 
     startupFlash();    // flash to show that the programme's started
 
