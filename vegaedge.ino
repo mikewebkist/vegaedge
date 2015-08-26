@@ -114,7 +114,7 @@ void loop() {
 	state++;
 	pressed = 0;
 	// The number of modes
-	if(state > 9) {
+	if(state > 10) {
 	    state = 99;
 	} else if(state > 2) { // Turn everthing off when switching to a blinking mode.
 	    currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
