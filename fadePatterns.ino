@@ -226,7 +226,7 @@ void batteryLevel() {
     timeNow = millis();
     if (timeNow > nextTime) {
 	currentLEDvalue[0] = 0;
-	currentLEDvalue[1] = ((level >> n) & 1) * fashionBrightness;
+	currentLEDvalue[1] = level >> 2;
 	currentLEDvalue[2] = 0;
 	n = n + 1;
 	if(n == 16) {
