@@ -65,6 +65,7 @@ void doFlashing(int flash_type) {
     else if (flash_type == 7) { binaryCount(); }
     else if (flash_type == 8) { grayCount(); }
     else if (flash_type == 9) { johnsonCounter(); }
+    else if (flash_type == 10) { batteryLevel(); }
 }
 
 void strobe() {
@@ -212,5 +213,28 @@ void johnsonCounter() {
 	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
 	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
 	nextTime = timeNow + nextIncrement;  
+    }
+}
+
+void batteryLevel() {
+    int level =  analogRead(voltPin);
+    static int n = 0;
+    static int nextIncrement = 250;
+    static int nextTime = 0;
+    int timeNow;
+    
+    timeNow = millis();
+    if (timeNow > nextTime) {
+	currentLEDvalue[0] = 0;
+	currentLEDvalue[1] = level >> 2;
+	currentLEDvalue[2] = 0;
+	n = n + 1;
+	if(n == 16) {
+	    n = 0;
+	    currentLEDvalue[0] = fashionBrightness;
+    	    currentLEDvalue[1] = 0;
+	    currentLEDvalue[2] = fashionBrightness;
+	}
+	nextTime = timeNow + nextIncrement;
     }
 }
