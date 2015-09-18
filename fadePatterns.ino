@@ -35,26 +35,44 @@ const byte chasing[256][3] PROGMEM = {
 
 void doFlashing(int flash_type) {
     if (flash_type == 3) {      // Mackey special
-	currentLEDvalue[1] = 0;
+	currentLEDvalue[2] = 0;
+	currentLEDvalue[3] = 0;
+	currentLEDvalue[4] = 0;
+	currentLEDvalue[5] = 0;
 	static int fadeDir = 1;
 
 	if (currentLEDvalue[0] == 0) {
 	    fadeDir = 1;
-	    digitalWrite(ledPin1, HIGH);
+	    strip.setPixelColor(2, 255, 255, 255);
+	    strip.setPixelColor(3, 255, 255, 255);
+	    strip.setPixelColor(4, 255, 255, 255);
+	    strip.setPixelColor(5, 255, 255, 255);
+	    strip.show();
 	    delay(100);
-	    digitalWrite(ledPin1, LOW);
+	    strip.setPixelColor(2, 0, 0, 0);
+	    strip.setPixelColor(3, 0, 0, 0);
+	    strip.setPixelColor(4, 0, 0, 0);
+	    strip.setPixelColor(5, 0, 0, 0);
+	    strip.show();
 	    delay(100);
 	}
 	else if (currentLEDvalue[0] == 255) { fadeDir = -1; }     
 	currentLEDvalue[0] += fadeDir;
-	currentLEDvalue[2] = currentLEDvalue[0];
+	currentLEDvalue[1] = currentLEDvalue[0];
+	currentLEDvalue[6] = currentLEDvalue[0];
+	currentLEDvalue[7] = currentLEDvalue[0];
 	delay(3);
     }
 
     else if (flash_type == 4) {      // chasing     
 	currentLEDvalue[0] = pgm_read_byte(&(chasing[frameStep][0]));
-	currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][1]));
-	currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][2]));
+	currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][0]));
+	currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][1]));
+	currentLEDvalue[3] = pgm_read_byte(&(chasing[frameStep][1]));
+	currentLEDvalue[4] = pgm_read_byte(&(chasing[frameStep][1]));
+	currentLEDvalue[5] = pgm_read_byte(&(chasing[frameStep][1]));
+	currentLEDvalue[6] = pgm_read_byte(&(chasing[frameStep][2]));
+	currentLEDvalue[7] = pgm_read_byte(&(chasing[frameStep][2]));
 	delay(3);
 	frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.   
     }
@@ -68,26 +86,10 @@ void doFlashing(int flash_type) {
     else if (flash_type == 10) { batteryLevel(); }
 }
 
-void strobe() {
-    /*
-       20 annoying cyclist
-       50 even more annoying
-       100 emergency blinker
-
-     */
-
-    static int goNow;
-    goNow = (millis()/20)%2;
-    currentLEDvalue[0] = goNow * 255 * .66;
-    currentLEDvalue[1] = goNow * 255;
-    currentLEDvalue[2] = goNow * 255 * .66;
-
-}
-
 void noise() {
-    currentLEDvalue[0] = random(255);
-    currentLEDvalue[1] = random(255);
-    currentLEDvalue[2] = random(255);  
+    for(int i=0; i<8; i++) {
+	currentLEDvalue[i] = random(255);
+    }
 }
 
 void softNoise() {
@@ -100,39 +102,22 @@ void softNoise() {
      */
 
     //int counter = (millis()/200)%3;
-    currentLEDvalue[(millis()/100)%3] = random(255);
-}
-
-void softNoiseProper() {
-    /*
-       50 twinkling atmosphere
-       30 faster twinkling
-       10 epilepsy
-
-     */
-
-    static int counter;
-    static int lastCounter = -1;
-    counter = (millis()/50)%3;
-    if (counter!= lastCounter) {
-	currentLEDvalue[counter] = random(255);
-	lastCounter = counter;
-    }
+    currentLEDvalue[(millis()/10)%8] = random(fashionBrightness);
 }
 
 void fireflies() {
-    static int nextFly[3] = {0, 0, 0};
+    static int nextFly[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     static int fireflyFade = 1;
-    static int flyTime = 3000;      // max time between flashes on an LED
+    static int flyTime = 10000;      // max time between flashes on an LED
     static int timeNow;
 
     timeNow = millis();
 
     // flash the fly if its wait time has passed
-    for (int x = 0; x < 3; x++){ 
+    for (int x = 0; x < 8; x++){ 
 	if (timeNow > nextFly[x]) {
-	    currentLEDvalue[x] = random(96, 255);
+	    currentLEDvalue[x] = random(fashionBrightness, safetyBrightness);
 	    nextFly[x] = timeNow + random(flyTime);
 	}
 	else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
@@ -141,9 +126,9 @@ void fireflies() {
     }
 
     // fade
-    currentLEDvalue[0] = max(currentLEDvalue[0] - fireflyFade, 0);
-    currentLEDvalue[1] = max(currentLEDvalue[1] - fireflyFade, 0);
-    currentLEDvalue[2] = max(currentLEDvalue[2] - fireflyFade, 0);
+    for(int i=0; i<8; i++) {
+	currentLEDvalue[i] = max(currentLEDvalue[i] - fireflyFade, 0);
+    }
 }
 
 void flickerSunrise() {
@@ -174,10 +159,10 @@ void binaryCount() {
     
     timeNow = millis();
     if (timeNow > nextTime) {
-	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
-	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
-	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
-	n = ++n % 8;
+	for(int i=0; i<8; i++) {
+	    currentLEDvalue[i] =  ((n >> i) &  1) * fashionBrightness;
+	}
+	n = ++n % 256;
 	nextTime = timeNow + nextIncrement;
     }
 }
@@ -185,15 +170,18 @@ void binaryCount() {
 void grayCount() {
     // http://en.wikipedia.org/wiki/Gray_code
     static byte n = 0;
-    static byte grayBits[] = { 0, 1, 0, 2 };
     const unsigned long nextIncrement = 250;
     static unsigned long nextTime = 0;
     unsigned long timeNow;
-    
+
     timeNow = millis();
     if (timeNow > nextTime) {
-	currentLEDvalue[grayBits[n]] = currentLEDvalue[grayBits[n]]  == 0 ? fashionBrightness : 0;
-	n = ++n % 4;
+	int x = n - 1;
+	x = x ^ (x >> 1);
+	for(int i=0; i<8; i++) {
+	    currentLEDvalue[i] =  ((x >> i) & 1) * fashionBrightness;
+	}
+	n = ++n % 256;
 	nextTime = timeNow + nextIncrement;  
     }
 }
@@ -208,32 +196,33 @@ void johnsonCounter() {
     timeNow = millis();
     if (timeNow > nextTime) {
 	// Take LSB, flip it, move it to MSB, shift byte right 1 bit.
-	n = (n & 1 ^ 1) << 2 | n >> 1;
-	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
-	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
-	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
+	n = ((n >> 7) ^ 1) | (n << 1);
+	for(int i=0; i<8; i++) {
+	    currentLEDvalue[i] =  ((n >> i) & 1) * fashionBrightness;
+	}
 	nextTime = timeNow + nextIncrement;  
     }
 }
 
 void batteryLevel() {
-    int level =  analogRead(voltPin);
-    static int n = 0;
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    int timeNow;
+    static long nextIncrement = 10000;
+    static long nextTime = 0;
+    long timeNow;
+    int charge;
+    int i;
     
     timeNow = millis();
     if (timeNow > nextTime) {
-	currentLEDvalue[0] = 0;
-	currentLEDvalue[1] = level >> 2;
-	currentLEDvalue[2] = 0;
-	n = n + 1;
-	if(n == 16) {
-	    n = 0;
-	    currentLEDvalue[0] = fashionBrightness;
-    	    currentLEDvalue[1] = 0;
-	    currentLEDvalue[2] = fashionBrightness;
+	charge = battery.chargePercentage();
+	battery.reset();
+	Serial.print(charge); // print out the battery %
+	Serial.println("%");
+	for(i=0; i<8; i++) {
+	    if(i <= (8 * charge / 100)) {
+		currentLEDvalue[i] = 64;
+	    } else {
+		currentLEDvalue[i] = 0;
+	    }
 	}
 	nextTime = timeNow + nextIncrement;
     }
