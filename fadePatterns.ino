@@ -65,14 +65,9 @@ void doFlashing(int flash_type) {
     }
 
     else if (flash_type == 4) {      // chasing     
-	currentLEDvalue[0] = pgm_read_byte(&(chasing[frameStep][0]));
-	currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][0]));
-	currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][1]));
-	currentLEDvalue[3] = pgm_read_byte(&(chasing[frameStep][1]));
-	currentLEDvalue[4] = pgm_read_byte(&(chasing[frameStep][1]));
-	currentLEDvalue[5] = pgm_read_byte(&(chasing[frameStep][1]));
-	currentLEDvalue[6] = pgm_read_byte(&(chasing[frameStep][2]));
-	currentLEDvalue[7] = pgm_read_byte(&(chasing[frameStep][2]));
+	for(int i=0; i<numLeds; i++) {
+	    currentLEDvalue[i] = pgm_read_byte(&(chasing[frameStep][i % 3]));
+	}
 	delay(3);
 	frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.   
     }
@@ -106,11 +101,11 @@ void softNoise() {
 }
 
 void fireflies() {
-    static int nextFly[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    static long nextFly[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
     static int fireflyFade = 1;
     static int flyTime = 10000;      // max time between flashes on an LED
-    static int timeNow;
+    static long timeNow;
 
     timeNow = millis();
 
@@ -152,7 +147,7 @@ void gaussRise() {
 }
 
 void binaryCount() {
-    static int n = 0;
+    static byte n = 0;
     const unsigned long nextIncrement = 250;
     static unsigned long nextTime = 0;
     unsigned long timeNow;
