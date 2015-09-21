@@ -41,7 +41,7 @@ int frameStep = 0;          // frame counter for flashing modes
 const int transitionRate = 3;    // fade time transitioning between modes
 
 // Interface memorizing
-boolean buttonState;             // the current reading from the input pin
+boolean buttonState = LOW;
 
 // Things to remember
 int state = -1;      // What state of the programme are we in?
@@ -68,8 +68,20 @@ void setup() {
     // goToSleep();    // sshhhh... there there...
 }
 
+long lastDebounceTime = 0;
+boolean lastButtonState = LOW;
+
 void loop() {
-    buttonState = digitalRead(buttonPin);
+    
+    boolean newButtonState = digitalRead(buttonPin);
+    if(newButtonState != lastButtonState) {
+	lastDebounceTime = millis();
+    }
+
+    if((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
+	buttonState = newButtonState;
+    }
+    lastButtonState = newButtonState;
 
     // All of the states set the currentLEDvalue, here we set the LEDs from those values
     for(int i=0; i<numLeds; i++) {
