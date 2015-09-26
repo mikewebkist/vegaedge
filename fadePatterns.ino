@@ -210,8 +210,6 @@ void batteryLevel() {
     if (timeNow > nextTime) {
 	charge = battery.chargePercentage();
 	battery.reset();
-	Serial.print(charge); // print out the battery %
-	Serial.println("%");
 	for(i=0; i<8; i++) {
 	    if(i <= (8 * charge / 100)) {
 		currentLEDvalue[i] = 64;

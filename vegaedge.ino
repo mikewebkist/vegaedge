@@ -4,6 +4,7 @@
 // *** SLEEP CODE
 
 #include <avr/sleep.h>
+#include <avr/power.h>
 #include <avr/interrupt.h>
 #define BODS 7                   //BOD Sleep bit in MCUCR
 #define BODSE 2                  //BOD Sleep enable bit in MCUCR
@@ -14,29 +15,21 @@ uint8_t mcucr1, mcucr2;
 const byte ledPin0 = 10;
 const byte ledPin2 = 11;
 const byte ledPin1 = 13;
-const byte voltPin = 3;
-const byte buttonPin = 8;
-const byte wakePin = 2;
+const byte buttonPin = 2;
 const int numLeds = 8;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(numLeds, 6, NEO_GRB + NEO_KHZ800);
 qduino q;
 fuelGauge battery;
 
-const int doubleClickThresh = 500;    // time between double-clicks, otherwise goes to sleep
+const int holdClickTime = 1000;    // time between double-clicks, otherwise goes to sleep
 
 // When all lights solid, actually dimmed to reduce strain on the battery.
-//const byte solidBrightness = 32;       // no resistors
-//const byte solidBrightness = 64;
-//const byte solidBrightness = 128;     // now using gamma array. value of 128 corresponds to PWM of 64
 const byte solidBrightness = 192;
-//const byte solidBrightness = 255;
-
 const byte fashionBrightness = 96;
 const byte safetyBrightness = 192;
 
 // Flashing timing
-const byte framerate = 2;    // time between flashing frames
 int frameStep = 0;          // frame counter for flashing modes
 const int transitionRate = 3;    // fade time transitioning between modes
 
@@ -46,7 +39,7 @@ boolean buttonState = LOW;
 // Things to remember
 int state = -1;      // What state of the programme are we in?
 int pressed = 0;
-int firstPressedTime;    // how long ago was the button pressed?
+long firstPressedTime;    // how long ago was the button pressed?
 byte currentLEDvalue[numLeds] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 int sleepCycled=0;
 
@@ -60,52 +53,37 @@ void setup() {
 
     //  Define pins
     pinMode(buttonPin, INPUT_PULLUP);
-    pinMode(voltPin, INPUT);
-    pinMode(wakePin, INPUT);
-
     startupFlash();    // flash to show that the programme's started
-
-    // goToSleep();    // sshhhh... there there...
+    goToSleep();    // sshhhh... there there...
 }
 
 long lastDebounceTime = 0;
-boolean lastButtonState = LOW;
+boolean lastButtonState = HIGH;
 
 void loop() {
-    
+    // Button debounce: still end up with buttonState having the 
+    // proper value, it just may take a few loop()s.
     boolean newButtonState = digitalRead(buttonPin);
-    if(newButtonState != lastButtonState) {
+    if (newButtonState != lastButtonState) {
 	lastDebounceTime = millis();
     }
 
-    if((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
+    if ((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
 	buttonState = newButtonState;
     }
+
     lastButtonState = newButtonState;
 
-    // All of the states set the currentLEDvalue, here we set the LEDs from those values
-    for(int i=0; i<numLeds; i++) {
-	strip.setPixelColor(i,
-		doGamma(currentLEDvalue[i]),
-		doGamma(currentLEDvalue[i]),
-		doGamma(currentLEDvalue[i]));
-    }
-    strip.show();
-
-    // ASLEEP, woken up
-    if (state == -1) {
-	if (buttonState == HIGH) {     // button released, wait for second button click
-	    firstPressedTime = millis();
-	    state++;
-	}
-    }
-
-    // Double-click
-    else if (state == 0) { // waiting for another click
-	int timeSinceFirstPress = millis() - firstPressedTime;
-	if (timeSinceFirstPress > doubleClickThresh) {
+    if(state == -1) {
+	if (buttonState == LOW) {
+	    if ((millis() - firstPressedTime) > holdClickTime) {
+		state++;
+	    }
+	} else { // buttonState == HIGH: released too early
+	    q.setRGB("yellow");
+	    delay(10);
 	    goToSleep();
-	}    // double click didn't happen in time, go back to sleep
+	}
     }
 
     if (state > -1 && buttonState == LOW) {
@@ -122,6 +100,15 @@ void loop() {
 	    }
 	}
     }
+
+    // All of the states set the currentLEDvalue, here we set the LEDs from those values
+    for(int i=0; i<numLeds; i++) {
+	strip.setPixelColor(i,
+		doGamma(currentLEDvalue[i]),
+		doGamma(currentLEDvalue[i]),
+		doGamma(currentLEDvalue[i]));
+    }
+    strip.show();
 
     // SAFETY SOLID
     if (state == 1) {
@@ -170,12 +157,12 @@ void loop() {
 void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
-	for (int k = 255; k > 0; k--) {
+	for(int k = 255; k > 0; k--) {
 	    for(int i=0; i<numLeds; i++) {
-		if(i % 2) {
+		if (i % 2) {
 		    strip.setPixelColor(i, doGamma(k), doGamma(k), doGamma(k));
 		} else {
-		    strip.setPixelColor(i, doGamma(int(float(k) * .66)), doGamma(int(float(k) * .66)), doGamma(int(float(k) * .66)));
+		    strip.setPixelColor(i, doGamma(k >> 1), doGamma(k >> 1), doGamma(k >> 1));
 		}
 	    }
 	    strip.show();
@@ -187,31 +174,36 @@ void startupFlash() {
 void goToSleep(void)
 {
     state = -1;
-    /*
-    attachInterrupt(0, wakeUp, LOW);
-    LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); 
-    detachInterrupt(0); 
 
-    attachInterrupt(0, wakeUp, LOW);
-    // attachInterrupt(0, wakeUpNow, LOW);
-    set_sleep_mode(SLEEP_MODE_PWR_SAVE);
-    cli();
+    // Disable LEDs.
+    for(int i=0; i<numLeds; i++) {
+	strip.setPixelColor(i, 0, 0, 0);
+    }
+    strip.show();
+
+    q.setRGB("red");
+    delay(100);
+    q.ledOff();
+
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
-    //turn off the brown-out detector.
-    //must have an ATtiny45 or ATtiny85 rev C or later for software to be able to disable the BOD.
-    //current while sleeping will be <0.5uA if BOD is disabled, <25uA if not.
-    sei();                         //ensure interrupts enabled so we can wake up again
-    sleep_cpu();                   //go to sleep
+    noInterrupts();           // timed sequence follows
+    // will be called when pin D2 goes low
+    attachInterrupt(1, wake, FALLING);
+    EIFR = bit(INTF1);  // clear flag for interrupt 0
+
+    interrupts();             // guarantees next instruction executed
+    sleep_cpu();
+
+    // cancel sleep as a precaution
+    detachInterrupt(1);
     sleep_disable();
-    sei();                         //enable interrupts again (but INT0 is disabled from above)
-    */
+    q.setRGB("green");
+    delay(10);
+    q.ledOff();
+    firstPressedTime = millis();
+    lastButtonState = LOW;
 }
 
-/*
-ISR(INT0_vect) {
-    sleepCycled=1;
-}
-*/
-
-void wakeUp() {
-}                  //nothing to actually do here, the interrupt just wakes us up!
+void wake() {
+}  // end of wake
