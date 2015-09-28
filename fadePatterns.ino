@@ -202,21 +202,38 @@ void johnsonCounter() {
 void batteryLevel() {
     static long nextIncrement = 10000;
     static long nextTime = 0;
+    static int brightness = fashionBrightness;
     long timeNow;
-    int charge;
+    static int charge;
     int i;
+    static int cycles = 3;
     
     timeNow = millis();
     if (timeNow > nextTime) {
+	battery.wakeUp();
 	charge = battery.chargePercentage();
 	battery.reset();
-	for(i=0; i<8; i++) {
-	    if(i <= (8 * charge / 100)) {
-		currentLEDvalue[i] = 64;
-	    } else {
-		currentLEDvalue[i] = 0;
-	    }
-	}
 	nextTime = timeNow + nextIncrement;
+	battery.goToSleep();
     }
+
+    if(brightness == 32) {
+	if(cycles--) {
+	    brightness = fashionBrightness;
+	} else {
+	    cycles = 3; // reset counter so next time through we blink
+	    state++;    // move on to the next mode (which will for now is sleep)
+	}
+    } else {
+	brightness--;
+    }
+    
+    for(i=0; i<8; i++) {
+	if(i <= (8 * charge / 100)) {
+	    currentLEDvalue[i] = brightness;
+	} else {
+	    currentLEDvalue[i] = 0;
+	}
+    }
+    delay(3);
 }

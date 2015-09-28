@@ -22,7 +22,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(numLeds, 6, NEO_GRB + NEO_KHZ800);
 qduino q;
 fuelGauge battery;
 
-const int holdClickTime = 1000;    // time between double-clicks, otherwise goes to sleep
+const long holdClickTime = 1000;    // time between double-clicks, otherwise goes to sleep
 
 // When all lights solid, actually dimmed to reduce strain on the battery.
 const byte solidBrightness = 192;
@@ -50,6 +50,7 @@ void setup() {
     q.setup();
     q.ledOff();
     battery.setup();
+    battery.goToSleep();
 
     //  Define pins
     pinMode(buttonPin, INPUT_PULLUP);
@@ -177,6 +178,7 @@ void goToSleep(void)
 
     // Disable LEDs.
     for(int i=0; i<numLeds; i++) {
+	currentLEDvalue[i] = 0;
 	strip.setPixelColor(i, 0, 0, 0);
     }
     strip.show();
@@ -203,6 +205,7 @@ void goToSleep(void)
     q.ledOff();
     firstPressedTime = millis();
     lastButtonState = LOW;
+    pressed = 0;
 }
 
 void wake() {
