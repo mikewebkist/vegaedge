@@ -30,12 +30,16 @@ Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 // *** SLEEP CODE
 
 #include <avr/sleep.h>
-#include <avr/interrupt.h>
-#define BODS 7                   //BOD Sleep bit in MCUCR
-#define BODSE 2                  //BOD Sleep enable bit in MCUCR
-uint8_t mcucr1, mcucr2;
+#include <avr/wdt.h>
+#include <Adafruit_NeoPixel.h>
 
 // Hardware parameters //
+
+#define PIN 12
+#define button A5
+#define FET 1
+
+unsigned long shutdownTimer;
 
 const byte ledPin0 = 0;
 const byte ledPin2 = 1;
@@ -70,16 +74,32 @@ int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 byte currentLEDvalue[3] = { 0, 0, 0};
 
-void setup() {
-  // disable ADC, cut power consumption
-  ADCSRA = 0;
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(3, PIN, NEO_GRB + NEO_KHZ800);
 
-  //  Define pins
-  pinMode(buttonPin, INPUT_PULLUP);
-  pinMode(ledPin2, OUTPUT);
-  pinMode(ledPin0, OUTPUT);
-  pinMode(ledPin1, OUTPUT);
-  pinMode(voltPin, INPUT);
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+
+void setup() {
+  setup_watchdog(9);
+
+  pinMode(FET,OUTPUT);
+  digitalWrite(FET,HIGH); //setup FET
+
+  pinMode(PIN,OUTPUT);
+  digitalWrite(PIN,LOW); //setup LED signal bus
+
+  shutdownTimer = millis() + (60000*90);  // shutdown timer;
+
+  randomSeed(analogRead(A8)+analogRead(A7));
+
+  PORTA = (1<<PA7); // turn on pull-up on button
+
+  strip.begin();
+  strip.show();
 
   startupFlash();    // flash to show that the programme's started
 
@@ -182,50 +202,76 @@ void loop() {
 void startupFlash() {
   // v 3.2.2 flash pattern
   for (int i = 255; i > 0; i--) {
-    analogWrite(ledPin0, doGamma(i));
-    analogWrite(ledPin1, doGamma(int(float(i) * .66)));
-    analogWrite(ledPin2, doGamma(i));
+    strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
+    strip.setPixelColor(1, doGamma(i), doGamma(i), doGamma(i));
+    strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
+    strip.show();
     delay(1);
   }
   for (int i = 255; i > 0; i--) {
-    analogWrite(ledPin0, doGamma(i));
-    analogWrite(ledPin1, doGamma(int(float(i) * .66)));
-    analogWrite(ledPin2, doGamma(i));
+    strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
+    strip.setPixelColor(1, doGamma(i >> 1), doGamma(i >> 1), doGamma(i >> 1));
+    strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
+    strip.show();
     delay(1);
   }
+}
 
+void system_sleep() {
+  //f_wdt=0;                             // reset flag
+  cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
+
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
+  sleep_enable();
+
+  sleep_mode();                        // System sleeps here
+
+  sleep_disable();                     // System continues execution here when watchdog timed out
+  sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
 }
 
 void goToSleep(void)
 {
-  state = -1;
-  digitalWrite(ledPin0, LOW);
-  digitalWrite(ledPin1, LOW);
-  digitalWrite(ledPin2, LOW);
+    state = -1;
 
-  GIMSK |= _BV(INT0);                       //enable INT0
-  MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
-  //    MCUCR |= (1<<ISC00) | (1<<ISC01); // The rising edge of INT0 generates an interrupt request.
-  ACSR |= _BV(ACD);                         //disable the analog comparator
-  ADCSRA &= ~_BV(ADEN);                     //disable ADC
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sleep_enable();
-  //turn off the brown-out detector.
-  //must have an ATtiny45 or ATtiny85 rev C or later for software to be able to disable the BOD.
-  //current while sleeping will be <0.5uA if BOD is disabled, <25uA if not.
-  cli();
-  mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);  //turn off the brown-out detector
-  mcucr2 = mcucr1 & ~_BV(BODSE);
-  MCUCR = mcucr1;
-  MCUCR = mcucr2;
-  sei();                         //ensure interrupts enabled so we can wake up again
-  sleep_cpu();                   //go to sleep
-  cli();                         //wake up here, disable interrupts
-  GIMSK = 0x00;                  //disable INT0
-  sleep_disable();
-  sei();                         //enable interrupts again (but INT0 is disabled from above)
-
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    sleep_enable();
+    MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
+//    GIMSK |= _BV(INT0);                       //enable INT0
+    byte adcsra = ADCSRA;                     //save ADCSRA
+    ADCSRA &= ~_BV(ADEN);                     //disable ADC
+    cli();                                    //stop interrupts to ensure the BOD timed sequence executes as required
+    byte mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);  //turn off the brown-out detector
+    byte mcucr2 = mcucr1 & ~_BV(BODSE);
+    MCUCR = mcucr1;
+    MCUCR = mcucr2;
+    sei();                                    //ensure interrupts enabled so we can wake up again
+    sleep_cpu();                              //go to sleep
+    sleep_disable();                          //wake up here
+    ADCSRA = adcsra;                          //restore ADCSRA
 }
 
-ISR(INT0_vect) {
-}                  //nothing to actually do here, the interrupt just wakes us up!
+// 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
+// 6=1 sec,7=2 sec, 8=4 sec, 9=8sec
+void setup_watchdog(int ii) {
+
+  byte bb;
+  int ww;
+  if (ii > 9 ) ii=9;
+  bb=ii & 7;
+  if (ii > 7) bb|= (1<<5);
+  bb|= (1<<WDCE);
+  ww=bb;
+
+  MCUSR &= ~(1<<WDRF);
+  // start timed sequence
+  WDTCR |= (1<<WDCE) | (1<<WDE);
+  // set new watchdog timeout value
+  WDTCR = bb;
+  WDTCR |= _BV(WDIE);
+}
+
+// Watchdog Interrupt Service / is executed when watchdog timed out
+ISR(WDT_vect) {
+  //f_wdt=1;  // set global flag
+}
