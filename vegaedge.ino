@@ -45,7 +45,7 @@ const byte ledPin0 = 0;
 const byte ledPin2 = 1;
 const byte ledPin1 = 4;
 const byte voltPin = 3;
-const byte buttonPin = 2;
+const byte buttonPin = 5;
 
 
 const int doubleClickThresh = 500;    // time between double-clicks, otherwise goes to sleep
@@ -69,7 +69,7 @@ const int transitionRate = 3;    // fade time transitioning between modes
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = -1;      // What state of the programme are we in?
+int state = 1;      // What state of the programme are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 byte currentLEDvalue[3] = { 0, 0, 0};
@@ -92,43 +92,44 @@ void setup() {
   pinMode(PIN,OUTPUT);
   digitalWrite(PIN,LOW); //setup LED signal bus
 
-  shutdownTimer = millis() + (60000*90);  // shutdown timer;
+  pinMode(buttonPin, INPUT_PULLUP);
 
   randomSeed(analogRead(A8)+analogRead(A7));
 
-  PORTA = (1<<PA7); // turn on pull-up on button
+  // PORTA = (1<<PA7); // turn on pull-up on button
 
   strip.begin();
   strip.show();
 
   startupFlash();    // flash to show that the programme's started
-
-  goToSleep();    // sshhhh... there there...
+  state=1;
+  // goToSleep();    // sshhhh... there there...
 }
 
+void setLEDs() {
+  strip.setPixelColor(0,currentLEDvalue[0],currentLEDvalue[0],currentLEDvalue[0]);
+  strip.setPixelColor(1,currentLEDvalue[1],currentLEDvalue[1],currentLEDvalue[1]);
+  strip.setPixelColor(2,currentLEDvalue[2],currentLEDvalue[2],currentLEDvalue[2]);
+  strip.show();
+}
+
+long lastDebounceTime = 0;
+boolean lastButtonState = HIGH;
+
 void loop() {
-  buttonState = digitalRead(buttonPin);
-
-  // All of the states set the currentLEDvalue, here we set the LEDs from those values
-  analogWrite(ledPin0, doGamma(currentLEDvalue[0]));
-  analogWrite(ledPin1, doGamma(currentLEDvalue[1]));
-  analogWrite(ledPin2, doGamma(currentLEDvalue[2]));
-
-  // ASLEEP, woken up
-  if (state == -1) {
-    if (buttonState == HIGH) {     // button released, wait for second button click
-      firstPressedTime = millis();
-      state++;
-    }
+  setLEDs();
+  // Button debounce: still end up with buttonState having the
+  // proper value, it just may take a few loop()s.
+  boolean newButtonState = digitalRead(buttonPin);
+  if (newButtonState != lastButtonState) {
+      lastDebounceTime = millis();
   }
 
-  // Double-click
-  else if (state == 0) { // waiting for another click
-    int timeSinceFirstPress = millis() - firstPressedTime;
-    if (timeSinceFirstPress > doubleClickThresh) {
-      goToSleep();
-    }    // double click didn't happen in time, go back to sleep
+  if ((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
+      buttonState = newButtonState;
   }
+
+  lastButtonState = newButtonState;
 
   if (state > -1 && buttonState == LOW) {
     pressed = 1;
@@ -142,6 +143,7 @@ void loop() {
       currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
       currentLEDvalue[1] = 0;
       currentLEDvalue[2] = 0;
+      setLEDs();
     }
   }
 
@@ -191,7 +193,7 @@ void loop() {
     delay(transitionRate);
 
     if ((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
-      goToSleep();
+      state = 1;
     }       // go to sleep when the button's been released and fading is done
   }
 
