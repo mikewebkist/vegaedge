@@ -57,7 +57,7 @@ const int doubleClickThresh = 500;    // time between double-clicks, otherwise g
 const byte solidBrightness = 192;
 //const byte solidBrightness = 255;
 
-const byte fashionBrightness = 96;
+byte fashionBrightness = 96;
 const byte safetyBrightness = 192;
 
 // Flashing timing
@@ -117,6 +117,7 @@ long lastDebounceTime = 0;
 boolean lastButtonState = HIGH;
 
 void loop() {
+  fashionBrightness = analogRead(A9) >> 1;
   setLEDs();
   // Button debounce: still end up with buttonState having the
   // proper value, it just may take a few loop()s.
