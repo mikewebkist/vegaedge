@@ -1,7 +1,7 @@
 
 /* VEGA 4.0 code
 
-   ATtiny85 @ 1 MHz (internal oscillator; BOD disabled)
+ATtiny85 @ 1 MHz (internal oscillator; BOD disabled)
 
 notes:
 - Works with the arduino-tiny firmware <https://code.google.com/p/arduino-tiny/> but _not_ with attiny firmware specified by the hi-lo tech group.
@@ -25,7 +25,7 @@ We'd love your help making the code better! Send comments, snippets, anything to
 
 http://www.vegalite.com/ , 2014
 Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
- */
+*/
 
 // *** SLEEP CODE
 
@@ -85,125 +85,123 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(3, PIN, NEO_GRB + NEO_KHZ800);
 #endif
 
 void setup() {
-  setup_watchdog(9);
+    setup_watchdog(9);
 
-  pinMode(FET,OUTPUT);
-  digitalWrite(FET,HIGH); //setup FET
+    pinMode(FET,OUTPUT);
+    digitalWrite(FET,HIGH); //setup FET
 
-  pinMode(PIN,OUTPUT);
-  digitalWrite(PIN,LOW); //setup LED signal bus
+    pinMode(PIN,OUTPUT);
+    digitalWrite(PIN,LOW); //setup LED signal bus
 
-  pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(buttonPin, INPUT_PULLUP);
 
-  randomSeed(analogRead(A8)+analogRead(A7));
+    randomSeed(analogRead(A8)+analogRead(A7));
 
-  // PORTA = (1<<PA7); // turn on pull-up on button
+    // PORTA = (1<<PA7); // turn on pull-up on button
 
-  strip.begin();
-  strip.show();
+    strip.begin();
+    strip.show();
 
-  startupFlash();    // flash to show that the programme's started
-  state=1;
-  // goToSleep();    // sshhhh... there there...
+    startupFlash();    // flash to show that the programme's started
+    state=1;
+    // goToSleep();    // sshhhh... there there...
 }
 
 void setLEDs() {
-  strip.setPixelColor(0, currentLEDvalue[0] & colorMask[0], currentLEDvalue[0] & colorMask[1], currentLEDvalue[0] & colorMask[2]);
-  strip.setPixelColor(1, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
-  strip.setPixelColor(2, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
-  strip.show();
+    strip.setPixelColor(0, currentLEDvalue[0] & colorMask[0], currentLEDvalue[0] & colorMask[1], currentLEDvalue[0] & colorMask[2]);
+    strip.setPixelColor(1, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
+    strip.setPixelColor(2, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
+    strip.show();
 }
 
 long lastDebounceTime = 0;
 boolean lastButtonState = HIGH;
 
 void loop() {
-  fashionBrightness = analogRead(A9) >> 1;
-  setLEDs();
-  // Button debounce: still end up with buttonState having the
-  // proper value, it just may take a few loop()s.
-  boolean newButtonState = digitalRead(buttonPin);
-  if (newButtonState != lastButtonState) {
-      lastDebounceTime = millis();
-  }
-
-  if ((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
-      buttonState = newButtonState;
-  }
-
-  lastButtonState = newButtonState;
-
-  if (state > -1 && buttonState == LOW) {
-    pressed = 1;
-  } else if (pressed == 1 && buttonState == HIGH) {
-    state++;
-    colorMask[0] = colorMask[1] = colorMask[2] = 255;
-    pressed = 0;
-    // The number of modes
-    if (state > 2) { // Turn everthing off when switching to a blinking mode.
-      currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
-      currentLEDvalue[1] = 0;
-      currentLEDvalue[2] = 0;
-      // setLEDs();
+    fashionBrightness = analogRead(A9) >> 1;
+    setLEDs();
+    // Button debounce: still end up with buttonState having the
+    // proper value, it just may take a few loop()s.
+    boolean newButtonState = digitalRead(buttonPin);
+    if (newButtonState != lastButtonState) {
+        lastDebounceTime = millis();
     }
-  }
 
-  if (state > 0 && state < 99) {
-    doFlashing(state);
-  }
-
-  // Waiting for button release to go to sleep
-  else if (state == 99) {
-    // linear fading
-    if (currentLEDvalue[0] > 0) {
-      currentLEDvalue[0]--;
+    if ((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
+        buttonState = newButtonState;
     }
-    if (currentLEDvalue[1] > 0) {
-      currentLEDvalue[1]--;
+
+    lastButtonState = newButtonState;
+
+    if (state > -1 && buttonState == LOW) {
+        pressed = 1;
+    } else if (pressed == 1 && buttonState == HIGH) {
+        state++;
+        colorMask[0] = colorMask[1] = colorMask[2] = 255;
+        pressed = 0;
+        // The number of modes
+        if (state > 2) { // Turn everthing off when switching to a blinking mode.
+            currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
+            currentLEDvalue[1] = 0;
+            currentLEDvalue[2] = 0;
+            // setLEDs();
+        }
     }
-    if (currentLEDvalue[2] > 0) {
-      currentLEDvalue[2]--;
+
+    if (state > 0 && state < 99) {
+        doFlashing(state);
     }
-    delay(transitionRate);
 
-    if ((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
-      state = 1;
-    }       // go to sleep when the button's been released and fading is done
-  }
+    // Waiting for button release to go to sleep
+    else if (state == 99) {
+        // linear fading
+        if (currentLEDvalue[0] > 0) {
+            currentLEDvalue[0]--;
+        }
+        if (currentLEDvalue[1] > 0) {
+            currentLEDvalue[1]--;
+        }
+        if (currentLEDvalue[2] > 0) {
+            currentLEDvalue[2]--;
+        }
+        delay(transitionRate);
 
-
+        if ((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
+            state = 1;
+        }       // go to sleep when the button's been released and fading is done
+    }
 }
 
 // Flash pattern when the Edge turns on
 void startupFlash() {
-  // v 3.2.2 flash pattern
-  for (int i = 255; i > 0; i--) {
-    strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
-    strip.setPixelColor(1, doGamma(i), doGamma(i), doGamma(i));
-    strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
-    strip.show();
-    delay(1);
-  }
-  for (int i = 255; i > 0; i--) {
-    strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
-    strip.setPixelColor(1, doGamma(i >> 1), doGamma(i >> 1), doGamma(i >> 1));
-    strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
-    strip.show();
-    delay(1);
-  }
+    // v 3.2.2 flash pattern
+    for (int i = 255; i > 0; i--) {
+        strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
+        strip.setPixelColor(1, doGamma(i), doGamma(i), doGamma(i));
+        strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
+        strip.show();
+        delay(1);
+    }
+    for (int i = 255; i > 0; i--) {
+        strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
+        strip.setPixelColor(1, doGamma(i >> 1), doGamma(i >> 1), doGamma(i >> 1));
+        strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
+        strip.show();
+        delay(1);
+    }
 }
 
 void system_sleep() {
-  //f_wdt=0;                             // reset flag
-  cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
+    //f_wdt=0;                             // reset flag
+    cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
 
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
-  sleep_enable();
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
+    sleep_enable();
 
-  sleep_mode();                        // System sleeps here
+    sleep_mode();                        // System sleeps here
 
-  sleep_disable();                     // System continues execution here when watchdog timed out
-  sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
+    sleep_disable();                     // System continues execution here when watchdog timed out
+    sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
 }
 
 void goToSleep(void)
@@ -213,7 +211,7 @@ void goToSleep(void)
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
     MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
-//    GIMSK |= _BV(INT0);                       //enable INT0
+    //    GIMSK |= _BV(INT0);                       //enable INT0
     byte adcsra = ADCSRA;                     //save ADCSRA
     ADCSRA &= ~_BV(ADEN);                     //disable ADC
     cli();                                    //stop interrupts to ensure the BOD timed sequence executes as required
@@ -231,23 +229,23 @@ void goToSleep(void)
 // 6=1 sec,7=2 sec, 8=4 sec, 9=8sec
 void setup_watchdog(int ii) {
 
-  byte bb;
-  int ww;
-  if (ii > 9 ) ii=9;
-  bb=ii & 7;
-  if (ii > 7) bb|= (1<<5);
-  bb|= (1<<WDCE);
-  ww=bb;
+    byte bb;
+    int ww;
+    if (ii > 9 ) ii=9;
+    bb=ii & 7;
+    if (ii > 7) bb|= (1<<5);
+    bb|= (1<<WDCE);
+    ww=bb;
 
-  MCUSR &= ~(1<<WDRF);
-  // start timed sequence
-  WDTCR |= (1<<WDCE) | (1<<WDE);
-  // set new watchdog timeout value
-  WDTCR = bb;
-  WDTCR |= _BV(WDIE);
+    MCUSR &= ~(1<<WDRF);
+    // start timed sequence
+    WDTCR |= (1<<WDCE) | (1<<WDE);
+    // set new watchdog timeout value
+    WDTCR = bb;
+    WDTCR |= _BV(WDIE);
 }
 
 // Watchdog Interrupt Service / is executed when watchdog timed out
 ISR(WDT_vect) {
-  //f_wdt=1;  // set global flag
+    //f_wdt=1;  // set global flag
 }
