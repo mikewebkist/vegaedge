@@ -57,8 +57,8 @@ const int doubleClickThresh = 500;    // time between double-clicks, otherwise g
 const byte solidBrightness = 192;
 //const byte solidBrightness = 255;
 
-byte fashionBrightness = 96;
 const byte safetyBrightness = 192;
+byte fashionBrightness = safetyBrightness >> 1;
 
 // Flashing timing
 const byte framerate = 2;    // time between flashing frames
@@ -73,6 +73,7 @@ int state = 1;      // What state of the programme are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 byte currentLEDvalue[3] = { 0, 0, 0};
+byte colorMask[3] = { 255, 255, 255 };
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(3, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -107,9 +108,9 @@ void setup() {
 }
 
 void setLEDs() {
-  strip.setPixelColor(0,currentLEDvalue[0],currentLEDvalue[0],currentLEDvalue[0]);
-  strip.setPixelColor(1,currentLEDvalue[1],currentLEDvalue[1],currentLEDvalue[1]);
-  strip.setPixelColor(2,currentLEDvalue[2],currentLEDvalue[2],currentLEDvalue[2]);
+  strip.setPixelColor(0, currentLEDvalue[0] & colorMask[0], currentLEDvalue[0] & colorMask[1], currentLEDvalue[0] & colorMask[2]);
+  strip.setPixelColor(1, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
+  strip.setPixelColor(2, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
   strip.show();
 }
 
@@ -136,46 +137,18 @@ void loop() {
     pressed = 1;
   } else if (pressed == 1 && buttonState == HIGH) {
     state++;
+    colorMask[0] = colorMask[1] = colorMask[2] = 255;
     pressed = 0;
     // The number of modes
-    if (state > 10) {
-      state = 99;
-    } else if (state > 2) { // Turn everthing off when switching to a blinking mode.
+    if (state > 2) { // Turn everthing off when switching to a blinking mode.
       currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
       currentLEDvalue[1] = 0;
       currentLEDvalue[2] = 0;
-      setLEDs();
+      // setLEDs();
     }
   }
 
-  // SAFETY SOLID
-  if (state == 1) {
-    if (currentLEDvalue[0] < safetyBrightness) {
-      currentLEDvalue[0]++;
-    }     // fade in to solidBrightness value
-    if (currentLEDvalue[1] < safetyBrightness) {
-      currentLEDvalue[1]++;
-    }
-    if (currentLEDvalue[2] < safetyBrightness) {
-      currentLEDvalue[2]++;
-    }
-    delay(3);
-  }
-
-  // FASHION SOLID
-  else if (state == 2) {
-    if (currentLEDvalue[0] > fashionBrightness) {
-      currentLEDvalue[0]--;
-    }     // fade down to solidBrightness value
-    if (currentLEDvalue[1] > fashionBrightness) {
-      currentLEDvalue[1]--;
-    }
-    if (currentLEDvalue[2] > fashionBrightness) {
-      currentLEDvalue[2]--;
-    }
-    delay(3);
-  }
-  else if (state > 2 && state < 99) {
+  if (state > 0 && state < 99) {
     doFlashing(state);
   }
 

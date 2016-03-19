@@ -34,7 +34,9 @@ const byte chasing[256][3] PROGMEM = {
 };
 
 void doFlashing(int flash_type) {
-  if (flash_type == 3) {      // Mackey special
+  if (state == 1) { goSolid(safetyBrightness); }
+  else if (state == 2) { goSolid(fashionBrightness); }
+  else if (flash_type == 3) {      // Mackey special
     currentLEDvalue[1] = 0;
     static int fadeDir = 1;
 
@@ -55,8 +57,8 @@ void doFlashing(int flash_type) {
 
   else if (flash_type == 4) {      // chasing
     currentLEDvalue[0] = pgm_read_byte(&(chasing[frameStep][0]));
-    currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][1]));
-    currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][2]));
+    currentLEDvalue[1] = pgm_read_byte(&(chasing[frameStep][1]));
+    currentLEDvalue[2] = pgm_read_byte(&(chasing[frameStep][2]));
     delay(3);
     frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.
   }
@@ -67,7 +69,19 @@ void doFlashing(int flash_type) {
   else if (flash_type == 7) { binaryCount(); }
   else if (flash_type == 8) { grayCount(); }
   else if (flash_type == 9) { johnsonCounter(); }
-  else if (flash_type == 10) { batteryLevel(); }
+  else if (flash_type == 10) { strobe(); }
+  else { state = 99; }
+}
+
+void goSolid(byte brightness) {
+  for(int led=0; led<3; led++) {
+    if(currentLEDvalue[led] < brightness) {
+      currentLEDvalue[led]++;
+    } else if(currentLEDvalue[led] > brightness) {
+      currentLEDvalue[led]--;
+    }
+  }
+  delay(3);
 }
 
 void strobe() {
@@ -100,7 +114,7 @@ void softNoise() {
        200
 
      */
-
+    colorMask[0] = 255; colorMask[1] = 127; colorMask[2] = 15;
     //int counter = (millis()/200)%3;
     currentLEDvalue[(millis()/100)%3] = random(fashionBrightness);
 }
@@ -128,6 +142,8 @@ void fireflies() {
     static int fireflyFade = 1;
     static int flyTime = 3000;      // max time between flashes on an LED
     static int timeNow;
+
+    colorMask[0] = 255; colorMask[1] = 255; colorMask[2] = 0;
 
     timeNow = millis();
 
@@ -214,29 +230,6 @@ void johnsonCounter() {
 	currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
 	currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
 	currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
-	nextTime = timeNow + nextIncrement;
-    }
-}
-
-void batteryLevel() {
-    int level =  analogRead(voltPin);
-    static int n = 0;
-    static int nextIncrement = 250;
-    static int nextTime = 0;
-    int timeNow;
-
-    timeNow = millis();
-    if (timeNow > nextTime) {
-	currentLEDvalue[0] = 0;
-	currentLEDvalue[1] = level >> 2;
-	currentLEDvalue[2] = 0;
-	n = n + 1;
-	if(n == 16) {
-	    n = 0;
-	    currentLEDvalue[0] = fashionBrightness;
-    	    currentLEDvalue[1] = 0;
-	    currentLEDvalue[2] = fashionBrightness;
-	}
 	nextTime = timeNow + nextIncrement;
     }
 }
