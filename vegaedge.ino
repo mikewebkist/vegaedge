@@ -109,8 +109,8 @@ void setup() {
 
 void setLEDs() {
     strip.setPixelColor(0, currentLEDvalue[0] & colorMask[0], currentLEDvalue[0] & colorMask[1], currentLEDvalue[0] & colorMask[2]);
-    strip.setPixelColor(1, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
-    strip.setPixelColor(2, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
+    strip.setPixelColor(1, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
+    strip.setPixelColor(2, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
     strip.show();
 }
 
@@ -172,22 +172,16 @@ void loop() {
     }
 }
 
-// Flash pattern when the Edge turns on
 void startupFlash() {
     // v 3.2.2 flash pattern
-    for (int i = 255; i > 0; i--) {
-        strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
-        strip.setPixelColor(1, doGamma(i), doGamma(i), doGamma(i));
-        strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
-        strip.show();
-        delay(1);
-    }
-    for (int i = 255; i > 0; i--) {
-        strip.setPixelColor(0, doGamma(i), doGamma(i), doGamma(i));
-        strip.setPixelColor(1, doGamma(i >> 1), doGamma(i >> 1), doGamma(i >> 1));
-        strip.setPixelColor(2, doGamma(i), doGamma(i), doGamma(i));
-        strip.show();
-        delay(1);
+    for(int j=0; j<2; j++) {
+        for(int k = 255; k > 0; k--) {
+            currentLEDvalue[0] = doGamma(k);
+            currentLEDvalue[1] = doGamma(k);
+            currentLEDvalue[2] = doGamma(k);
+            setLEDs();
+            delay(1);
+        }
     }
 }
 
