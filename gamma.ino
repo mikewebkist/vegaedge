@@ -1,7 +1,7 @@
 
 // Gamma correction for the LED brightnesses.
 
-const int gamma[] PROGMEM = {
+const uint32_t gamma[] PROGMEM = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
     1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4,
     4, 4, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 9,
@@ -20,11 +20,21 @@ const int gamma[] PROGMEM = {
     226, 228, 230, 232, 233, 235, 237, 239, 241, 243, 245, 247, 249, 251, 253, 255
 };
 
-byte doGamma(byte pwm) {
-    return pgm_read_byte(&gamma[pwm]);
+uint32_t doGamma(uint32_t pwm) {
+    // uint32_t gammaVal = pgm_read_byte(&gamma[pwm]);
+    return doGamma(pwm, pwm, pwm);
+    // return pwm << 16 | pwm << 8 | pwm;
 }
 
-const byte chasing[256][3] PROGMEM = {
+uint32_t doGamma(uint32_t r, uint32_t g, uint32_t b) {
+    // uint32_t gammaR = pgm_read_byte(&gamma[r]);
+    // uint32_t gammaG = pgm_read_byte(&gamma[g]);
+    // uint32_t gammaB = pgm_read_byte(&gamma[b]);
+    // return gammaR << 16 | gammaG << 8  | gammaB;
+    return r << 16 | g << 8 | b;
+}
+
+const uint32_t chasing[256][3] PROGMEM = {
     {168, 0, 0},  {168, 0, 0},  {168, 0, 0},  {168, 0, 0},   {168, 0, 0},   {168, 0, 0},   {168, 0, 0},   {168, 0, 0},
     {168, 0, 0},  {168, 0, 0},  {168, 0, 0},  {168, 0, 0},   {168, 0, 0},   {168, 0, 0},   {168, 0, 0},   {168, 0, 0},
     {168, 0, 0},  {166, 0, 0},  {163, 0, 0},  {161, 0, 0},   {158, 0, 0},   {156, 0, 0},   {154, 0, 0},   {151, 0, 0},
@@ -59,6 +69,6 @@ const byte chasing[256][3] PROGMEM = {
     {0, 0, 0},    {0, 0, 0},    {0, 0, 0},    {0, 0, 0},     {0, 0, 0},     {0, 0, 0},     {0, 0, 0},     {0, 0, 0},
 };
 
-byte getChase(byte pwm, byte led) {
+byte getChase(uint32_t pwm, uint32_t led) {
     return pgm_read_byte(&chasing[pwm][led]);
 }
