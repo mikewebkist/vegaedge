@@ -38,6 +38,7 @@ Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 #define PIN 12
 #define button A5
 #define FET 1
+#define NUMLEDS 3
 
 unsigned long shutdownTimer;
 
@@ -72,10 +73,10 @@ boolean buttonState;             // the current reading from the input pin
 int state = 1;      // What state of the programme are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
-byte currentLEDvalue[3] = { 0, 0, 0};
+uint32_t currentLEDvalue[NUMLEDS];
 byte colorMask[3] = { 255, 255, 255 };
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(3, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 #ifndef cbi
 #define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
@@ -100,26 +101,18 @@ void setup() {
     // PORTA = (1<<PA7); // turn on pull-up on button
 
     strip.begin();
-    strip.show();
 
     startupFlash();    // flash to show that the programme's started
     state=1;
     // goToSleep();    // sshhhh... there there...
 }
 
-void setLEDs() {
-    strip.setPixelColor(0, currentLEDvalue[0] & colorMask[0], currentLEDvalue[0] & colorMask[1], currentLEDvalue[0] & colorMask[2]);
-    strip.setPixelColor(1, currentLEDvalue[1] & colorMask[0], currentLEDvalue[1] & colorMask[1], currentLEDvalue[1] & colorMask[2]);
-    strip.setPixelColor(2, currentLEDvalue[2] & colorMask[0], currentLEDvalue[2] & colorMask[1], currentLEDvalue[2] & colorMask[2]);
-    strip.show();
-}
-
 long lastDebounceTime = 0;
 boolean lastButtonState = HIGH;
 
 void loop() {
-    fashionBrightness = analogRead(A9) >> 1;
-    setLEDs();
+    // fashionBrightness = analogRead(A9) >> 1;
+
     // Button debounce: still end up with buttonState having the
     // proper value, it just may take a few loop()s.
     boolean newButtonState = digitalRead(buttonPin);
@@ -137,16 +130,20 @@ void loop() {
         pressed = 1;
     } else if (pressed == 1 && buttonState == HIGH) {
         state++;
-        colorMask[0] = colorMask[1] = colorMask[2] = 255;
         pressed = 0;
         // The number of modes
         if (state > 2) { // Turn everthing off when switching to a blinking mode.
-            currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
-            currentLEDvalue[1] = 0;
-            currentLEDvalue[2] = 0;
-            // setLEDs();
+            for(int i=0; i<NUMLEDS; i++) {
+                currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
+            }
         }
     }
+
+    // All of the states set the currentLEDvalue, here we set the LEDs from those values
+    for(int i=0; i<NUMLEDS; i++) {
+        strip.setPixelColor(i, currentLEDvalue[i]);
+    }
+    strip.show();
 
     if (state > 0 && state < 99) {
         doFlashing(state);
@@ -155,31 +152,52 @@ void loop() {
     // Waiting for button release to go to sleep
     else if (state == 99) {
         // linear fading
-        if (currentLEDvalue[0] > 0) {
-            currentLEDvalue[0]--;
-        }
-        if (currentLEDvalue[1] > 0) {
-            currentLEDvalue[1]--;
-        }
-        if (currentLEDvalue[2] > 0) {
-            currentLEDvalue[2]--;
+        for(int i=0; i<NUMLEDS; i++) {
+            if (currentLEDvalue[i] > 0) {
+                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+            }
         }
         delay(transitionRate);
 
-        if ((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
+        int total = 0;
+        for(int i=0; i<NUMLEDS; i++) { total = total + currentLEDvalue[i]; }
+        if (total == 0) {
             state = 1;
+            // goToSleep();
         }       // go to sleep when the button's been released and fading is done
     }
+}
+
+uint32_t fadeDown(uint32_t val) { return fadeDown(val, 0); }
+uint32_t fadeDown(uint32_t val, uint32_t lowVal) {
+    uint32_t r = (val >> 16) & 0xff;
+    uint32_t g = (val >> 8) & 0xff;
+    uint32_t b = val & 0xff;
+    if(r > lowVal) { r--; }
+    if(g > lowVal) { g--; }
+    if(b > lowVal) { b--; }
+    return r << 16 | g << 8 | b;
+}
+
+uint32_t fadeUp(uint32_t val) { return fadeUp(val, 255); }
+uint32_t fadeUp(uint32_t val, uint32_t highVal) {
+    uint32_t r = (val >> 16) & 0xff;
+    uint32_t g = (val >> 8) & 0xff;
+    uint32_t b = val & 0xff;
+    if(r < highVal) { r++; }
+    if(g < highVal) { g++; }
+    if(b < highVal) { b++; }
+    return r << 16 | g << 8 | b;
 }
 
 void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
         for(int k = 255; k > 0; k--) {
-            currentLEDvalue[0] = doGamma(k);
-            currentLEDvalue[1] = doGamma(k);
-            currentLEDvalue[2] = doGamma(k);
-            setLEDs();
+            for(int i=0; i<NUMLEDS; i++) {
+                strip.setPixelColor(i, doGamma(k));
+            }
+            strip.show();
             delay(1);
         }
     }
