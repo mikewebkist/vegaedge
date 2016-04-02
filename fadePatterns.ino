@@ -100,8 +100,6 @@ void candle() {
     100 still firelike
     200
     */
-    //int counter = (millis()/200)%3;
-    int candleGlow = random(fashionBrightness >> 1) + (fashionBrightness >> 1);
     currentLEDvalue[(millis()/30) % NUMLEDS] = doGamma(255 - random(64), 110, random(16));
 }
 
