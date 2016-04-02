@@ -58,13 +58,14 @@ const int doubleClickThresh = 500;    // time between double-clicks, otherwise g
 const byte solidBrightness = 192;
 //const byte solidBrightness = 255;
 
-const byte safetyBrightness = 192;
-byte fashionBrightness = safetyBrightness >> 1;
+const byte safetyBrightness = 255;
+byte fashionBrightness = safetyBrightness >> 2;
 
 // Flashing timing
 const byte framerate = 2;    // time between flashing frames
 int frameStep = 0;          // frame counter for flashing modes
 const int transitionRate = 3;    // fade time transitioning between modes
+long modeStartTime = 0;
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
@@ -111,7 +112,7 @@ long lastDebounceTime = 0;
 boolean lastButtonState = HIGH;
 
 void loop() {
-    // fashionBrightness = analogRead(A9) >> 1;
+    fashionBrightness = (analogRead(A9) >> 1) + (safetyBrightness >> 3);
 
     // Button debounce: still end up with buttonState having the
     // proper value, it just may take a few loop()s.
@@ -133,6 +134,7 @@ void loop() {
         pressed = 0;
         // The number of modes
         if (state > 2) { // Turn everthing off when switching to a blinking mode.
+            modeStartTime = millis();
             for(int i=0; i<NUMLEDS; i++) {
                 currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
             }

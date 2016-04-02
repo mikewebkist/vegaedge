@@ -1,8 +1,7 @@
 void doFlashing(int flash_type) {
     switch(flash_type) {
-        case 1: goSolid(safetyBrightness); break;
-        case 2: goSolid(fashionBrightness); break;
-        // case 3: mackeySpecial(); break;
+        case 1: goSolid(fashionBrightness); break;
+        case 2: mackeySpecial(); break;
         case 3: candle(); break;
         case 4: chasingMode(); break;
         case 5: softNoise(); break;
@@ -34,33 +33,28 @@ void chasingMode() {
     frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.
 }
 
-// void mackeySpecial() {
-//     currentLEDvalue[1] = 0;
-//     static int fadeDir = 1;
-//
-//     if (currentLEDvalue[0] == 0) {
-//         fadeDir = 1;
-//         currentLEDvalue[1] = doGamma(fashionBrightness);
-//         for(int i=0; i<NUMLEDS; i++) {
-//             strip.setPixelColor(i, doGamma(currentLEDvalue[i]));
-//         }
-//         strip.show();
-//         delay(100);
-//         currentLEDvalue[1] = 0;
-//         for(int i=0; i<NUMLEDS; i++) {
-//             strip.setPixelColor(i, doGamma(currentLEDvalue[i]));
-//         }
-//         strip.show();
-//         delay(100);
-//     }
-//     else if (currentLEDvalue[0] == doGamma(fashionBrightness)) {
-//         fadeDir = -1;
-//     }
-//
-//     currentLEDvalue[0] += fadeDir;
-//     currentLEDvalue[2] = currentLEDvalue[0];
-//     delay(3);
-// }
+void mackeySpecial() {
+    currentLEDvalue[1] = 0;
+    static int fadeDir = 1;
+
+    long time = (millis() - modeStartTime) % 1700;
+    long fadeVal = 0;
+    long flashVal = 0;
+
+    // Fade in
+    if (time < 750) { fadeVal = time * safetyBrightness / 1500; flashVal = 0; }
+    // Fade out
+    else if (time >= 750 && time < 1500)  { fadeVal = (750 - (time - 750)) * safetyBrightness / 1500; flashVal = 0; }
+    // Turn on middle
+    else if (time >= 1500 && time < 1600) { fadeVal = 0; flashVal = safetyBrightness; }
+    // Turn off middle
+    else if (time >= 1600 && time < 1700) { fadeVal = 0; flashVal = 0; }
+
+
+    currentLEDvalue[0] = doGamma(fadeVal);
+    currentLEDvalue[2] = doGamma(flashVal);
+    currentLEDvalue[1] = doGamma(fadeVal);
+}
 
 void strobe() {
     /*
@@ -91,7 +85,9 @@ void softNoise() {
     200
     */
     //int counter = (millis()/200)%3;
-    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(random(fashionBrightness),0,0);
+    if ((millis() - modeStartTime) % 50 == 0) { // only change on the 500ms boundary
+      currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+    }
 }
 void candle() {
     /*
@@ -100,7 +96,7 @@ void candle() {
     100 still firelike
     200
     */
-    currentLEDvalue[(millis()/30) % NUMLEDS] = doGamma(255 - random(64), 110, random(16));
+    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(255 - random(64), 110, random(16));
 }
 
 void fireflies() {
@@ -126,7 +122,7 @@ void fireflies() {
 
     // fade
     for(int i=0; i<NUMLEDS; i++) {
-        if(currentLEDvalue[i] > 0) {    
+        if(currentLEDvalue[i] > 0) {
             currentLEDvalue[i] = currentLEDvalue[i] - fireflyFade;
         }
     }
