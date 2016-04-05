@@ -31,6 +31,7 @@ Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 
 #include <avr/sleep.h>
 #include <avr/wdt.h>
+#include <avr/interrupt.h>
 #include <Adafruit_NeoPixel.h>
 
 // Hardware parameters //
@@ -87,7 +88,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 #endif
 
 void setup() {
-    setup_watchdog(9);
+    // setup_watchdog(9);
 
     pinMode(FET,OUTPUT);
     digitalWrite(FET,HIGH); //setup FET
@@ -104,8 +105,8 @@ void setup() {
     strip.begin();
 
     startupFlash();    // flash to show that the programme's started
-    state=1;
-    // goToSleep();    // sshhhh... there there...
+    state = 1;
+    // state = 99; // Start asleep.
 }
 
 long lastDebounceTime = 0;
@@ -159,14 +160,7 @@ void loop() {
                 currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
             }
         }
-        delay(transitionRate);
-
-        int total = 0;
-        for(int i=0; i<NUMLEDS; i++) { total = total + currentLEDvalue[i]; }
-        if (total == 0) {
-            state = 1;
-            // goToSleep();
-        }       // go to sleep when the button's been released and fading is done
+        goToSleep();
     }
 }
 
@@ -225,7 +219,7 @@ void goToSleep(void)
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
     MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
-    //    GIMSK |= _BV(INT0);                       //enable INT0
+    // GIMSK |= _BV(INT0);                       //enable INT0
     byte adcsra = ADCSRA;                     //save ADCSRA
     ADCSRA &= ~_BV(ADEN);                     //disable ADC
     cli();                                    //stop interrupts to ensure the BOD timed sequence executes as required
@@ -235,31 +229,12 @@ void goToSleep(void)
     MCUCR = mcucr2;
     sei();                                    //ensure interrupts enabled so we can wake up again
     sleep_cpu();                              //go to sleep
+    // GIMSK = 0x00;                  //disable INT0
     sleep_disable();                          //wake up here
     ADCSRA = adcsra;                          //restore ADCSRA
 }
 
-// 0=16ms, 1=32ms,2=64ms,3=128ms,4=250ms,5=500ms
-// 6=1 sec,7=2 sec, 8=4 sec, 9=8sec
-void setup_watchdog(int ii) {
-
-    byte bb;
-    int ww;
-    if (ii > 9 ) ii=9;
-    bb=ii & 7;
-    if (ii > 7) bb|= (1<<5);
-    bb|= (1<<WDCE);
-    ww=bb;
-
-    MCUSR &= ~(1<<WDRF);
-    // start timed sequence
-    WDTCR |= (1<<WDCE) | (1<<WDE);
-    // set new watchdog timeout value
-    WDTCR = bb;
-    WDTCR |= _BV(WDIE);
-}
-
 // Watchdog Interrupt Service / is executed when watchdog timed out
-ISR(WDT_vect) {
+ISR(INT0_vect) {
     //f_wdt=1;  // set global flag
 }
