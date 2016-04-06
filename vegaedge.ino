@@ -30,7 +30,7 @@ Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 // *** SLEEP CODE
 
 #include <avr/sleep.h>
-#include <avr/wdt.h>
+// #include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -72,7 +72,7 @@ long modeStartTime = 0;
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 1;      // What state of the programme are we in?
+int state = 0; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
@@ -89,23 +89,21 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
     // setup_watchdog(9);
+    // ADCSRA &= ~_BV(ADEN); //disable ADC
 
     pinMode(FET,OUTPUT);
     digitalWrite(FET,HIGH); //setup FET
 
     pinMode(PIN,OUTPUT);
     digitalWrite(PIN,LOW); //setup LED signal bus
-
     pinMode(buttonPin, INPUT_PULLUP);
 
     randomSeed(analogRead(A8)+analogRead(A7));
 
-    // PORTA = (1<<PA7); // turn on pull-up on button
-
     strip.begin();
 
-    startupFlash();    // flash to show that the programme's started
-    state = 1;
+    startupFlash(); // flash to show that the programme's started
+
     // state = 99; // Start asleep.
 }
 
@@ -128,7 +126,7 @@ void loop() {
 
     lastButtonState = newButtonState;
 
-    if (state > -1 && buttonState == LOW) {
+    if (buttonState == LOW) {
         pressed = 1;
     } else if (pressed == 1 && buttonState == HIGH) {
         state++;
@@ -199,42 +197,24 @@ void startupFlash() {
     }
 }
 
-void system_sleep() {
-    //f_wdt=0;                             // reset flag
-    cbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter OFF
-
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN); // sleep mode is set here
-    sleep_enable();
-
-    sleep_mode();                        // System sleeps here
-
-    sleep_disable();                     // System continues execution here when watchdog timed out
-    sbi(ADCSRA,ADEN);                    // switch Analog to Digitalconverter ON
-}
-
-void goToSleep(void)
-{
-    state = -1;
+void goToSleep(void) {
+    state = 0;
 
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
-    MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
-    // GIMSK |= _BV(INT0);                       //enable INT0
-    byte adcsra = ADCSRA;                     //save ADCSRA
-    ADCSRA &= ~_BV(ADEN);                     //disable ADC
-    cli();                                    //stop interrupts to ensure the BOD timed sequence executes as required
-    byte mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);  //turn off the brown-out detector
-    byte mcucr2 = mcucr1 & ~_BV(BODSE);
-    MCUCR = mcucr1;
-    MCUCR = mcucr2;
-    sei();                                    //ensure interrupts enabled so we can wake up again
-    sleep_cpu();                              //go to sleep
-    // GIMSK = 0x00;                  //disable INT0
-    sleep_disable();                          //wake up here
-    ADCSRA = adcsra;                          //restore ADCSRA
+    PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
+    PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
+    PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
+
+    byte adcsra = ADCSRA;   // save ADCSRA
+    ADCSRA &= ~_BV(ADEN);   // disable ADC
+    cli();                  // stop interrupts to ensure the BOD timed sequence executes as required
+    sleep_bod_disable();    // disable brown out detection
+    sei();                  // ensure interrupts enabled so we can wake up again
+    sleep_cpu();            // go to sleep
+    sleep_disable();        // wake up here
+    PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
+    ADCSRA = adcsra;        // restore ADCSRA
 }
 
-// Watchdog Interrupt Service / is executed when watchdog timed out
-ISR(INT0_vect) {
-    //f_wdt=1;  // set global flag
-}
+EMPTY_INTERRUPT(PCINT0_vect);
