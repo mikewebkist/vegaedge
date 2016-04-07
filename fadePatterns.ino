@@ -96,7 +96,7 @@ void candle() {
     100 still firelike
     200
     */
-    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(255 - random(64), 110, random(16));
+    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(192 - random(64), 96, random(16));
 }
 
 void fireflies() {
@@ -132,8 +132,8 @@ void flickerSunrise() {
     int counter = (millis()/20)%256;
 
     // fade
-    currentLEDvalue[0] = doGamma(random(counter) >> 1);
-    currentLEDvalue[1] = doGamma(random(counter) >> 1);
+    currentLEDvalue[0] = doGamma(0, random(counter) >> 2, 0);
+    currentLEDvalue[1] = doGamma(0, random(counter) >> 2, 0);
     currentLEDvalue[2] = doGamma(random(counter), random(counter), 0);
 }
 

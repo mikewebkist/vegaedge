@@ -1,71 +1,34 @@
+/*
 
-/* VEGA 4.0 code
-
-ATtiny85 @ 1 MHz (internal oscillator; BOD disabled)
-
-notes:
-- Works with the arduino-tiny firmware <https://code.google.com/p/arduino-tiny/> but _not_ with attiny firmware specified by the hi-lo tech group.
-- The fade pattern is determined by a 256-long array of values for each of the LED brightnesses.
-- Assumed a gamma correction curve for the LEDs of ^2. That shaping is not implemented in the arduino code, we've done it in the stage before the arduino code.
-- Behaviour: double-click to turn on, single-click to cycle between solid, flashing, off (asleep).
-- The chip never goes off, it goes asleep. We've done almost everything we can to assure that power consumption while asleep is as low as possible.
+Based on code from the Vega Edge Kickstarter project, heavily modified.
 - for more information see http://www.vegalite.com/nerds .
 
-TO DO
-- More beautiful startup flashes.
-- lower clock speed to 128 kHz ultimately to save even more power, tho makes chip unprogrammable
-- low-battery detection
-- easter egg!
+Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 
-- versioning querying. Either softserial out, or some kind of light pulsing on startup, or with a specific button push. Easter egg!
-- software serial does not function at 1mHz. Even worth implementing? How else do we query version? Writing on board?
+-- Michael Cramer / @mikewebkist / cramer@webkist.com
 
-
-We'd love your help making the code better! Send comments, snippets, anything to hello@angellamackey.com .
-
-http://www.vegalite.com/ , 2014
-Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 */
 
-// *** SLEEP CODE
-
 #include <avr/sleep.h>
-// #include <avr/wdt.h>
 #include <avr/interrupt.h>
 #include <Adafruit_NeoPixel.h>
 
 // Hardware parameters //
 
 #define PIN 12
-#define button A5
+#define BUTTON 5
 #define FET 1
 #define NUMLEDS 3
 
 unsigned long shutdownTimer;
 
-const byte ledPin0 = 0;
-const byte ledPin2 = 1;
-const byte ledPin1 = 4;
-const byte voltPin = 3;
-const byte buttonPin = 5;
-
-
-const int doubleClickThresh = 500;    // time between double-clicks, otherwise goes to sleep
-
 // When all lights solid, actually dimmed to reduce strain on the battery.
-//const byte solidBrightness = 32;       // no resistors
-//const byte solidBrightness = 64;
-//const byte solidBrightness = 128;     // now using gamma array. value of 128 corresponds to PWM of 64
 const byte solidBrightness = 192;
-//const byte solidBrightness = 255;
-
 const byte safetyBrightness = 255;
 byte fashionBrightness = safetyBrightness >> 2;
 
 // Flashing timing
-const byte framerate = 2;    // time between flashing frames
 int frameStep = 0;          // frame counter for flashing modes
-const int transitionRate = 3;    // fade time transitioning between modes
 long modeStartTime = 0;
 
 // Interface memorizing
@@ -80,13 +43,6 @@ byte colorMask[3] = { 255, 255, 255 };
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
-#ifndef cbi
-#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
-#endif
-#ifndef sbi
-#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
-#endif
-
 void setup() {
     // setup_watchdog(9);
     // ADCSRA &= ~_BV(ADEN); //disable ADC
@@ -96,7 +52,7 @@ void setup() {
 
     pinMode(PIN,OUTPUT);
     digitalWrite(PIN,LOW); //setup LED signal bus
-    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(BUTTON, INPUT_PULLUP);
 
     randomSeed(analogRead(A8)+analogRead(A7));
 
@@ -115,7 +71,7 @@ void loop() {
 
     // Button debounce: still end up with buttonState having the
     // proper value, it just may take a few loop()s.
-    boolean newButtonState = digitalRead(buttonPin);
+    boolean newButtonState = digitalRead(BUTTON);
     if (newButtonState != lastButtonState) {
         lastDebounceTime = millis();
     }
