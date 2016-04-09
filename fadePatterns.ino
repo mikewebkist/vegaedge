@@ -86,7 +86,7 @@ void softNoise() {
     */
     //int counter = (millis()/200)%3;
     if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
-      currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+        currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
     }
 }
 
