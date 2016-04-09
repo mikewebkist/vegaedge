@@ -85,10 +85,11 @@ void softNoise() {
     200
     */
     //int counter = (millis()/200)%3;
-    if ((millis() - modeStartTime) % 50 == 0) { // only change on the 500ms boundary
+    if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
       currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
     }
 }
+
 void candle() {
     /*
     50 fire-like flicker
@@ -96,7 +97,11 @@ void candle() {
     100 still firelike
     200
     */
-    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(192 - random(64), 96, random(16));
+    uint32_t r = 192 - random(32);
+    uint32_t g = 128 - random(32);
+    uint32_t b = random(16);
+
+    currentLEDvalue[(millis()/10) % NUMLEDS] = doGamma(r, g, b);
 }
 
 void fireflies() {

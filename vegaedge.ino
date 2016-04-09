@@ -23,9 +23,9 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 unsigned long shutdownTimer;
 
 // When all lights solid, actually dimmed to reduce strain on the battery.
-const byte solidBrightness = 192;
-const byte safetyBrightness = 255;
-byte fashionBrightness = safetyBrightness >> 2;
+const uint32_t solidBrightness = 192;
+const uint32_t safetyBrightness = 255;
+uint32_t fashionBrightness = safetyBrightness >> 2;
 
 // Flashing timing
 int frameStep = 0;          // frame counter for flashing modes

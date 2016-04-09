@@ -27,11 +27,10 @@ uint32_t doGamma(uint32_t pwm) {
 }
 
 uint32_t doGamma(uint32_t r, uint32_t g, uint32_t b) {
-    // uint32_t gammaR = pgm_read_byte(&gamma[r]);
-    // uint32_t gammaG = pgm_read_byte(&gamma[g]);
-    // uint32_t gammaB = pgm_read_byte(&gamma[b]);
-    // return gammaR << 16 | gammaG << 8  | gammaB;
-    return r << 16 | g << 8 | b;
+    uint32_t gammaR = pgm_read_byte(&gamma[r]);
+    uint32_t gammaG = pgm_read_byte(&gamma[g]);
+    uint32_t gammaB = pgm_read_byte(&gamma[b]);
+    return gammaR << 16 | gammaG << 8  | gammaB;
 }
 
 const uint32_t chasing[256][3] PROGMEM = {
