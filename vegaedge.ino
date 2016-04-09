@@ -1,231 +1,176 @@
+/*
 
-/* VEGA 4.0 code
-
-   ATtiny85 @ 1 MHz (internal oscillator; BOD disabled)
-
-notes:
-- Works with the arduino-tiny firmware <https://code.google.com/p/arduino-tiny/> but _not_ with attiny firmware specified by the hi-lo tech group.
-- The fade pattern is determined by a 256-long array of values for each of the LED brightnesses.
-- Assumed a gamma correction curve for the LEDs of ^2. That shaping is not implemented in the arduino code, we've done it in the stage before the arduino code.
-- Behaviour: double-click to turn on, single-click to cycle between solid, flashing, off (asleep).
-- The chip never goes off, it goes asleep. We've done almost everything we can to assure that power consumption while asleep is as low as possible.
+Based on code from the Vega Edge Kickstarter project, heavily modified.
 - for more information see http://www.vegalite.com/nerds .
 
-TO DO
-- More beautiful startup flashes.
-- lower clock speed to 128 kHz ultimately to save even more power, tho makes chip unprogrammable
-- low-battery detection
-- easter egg!
+Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
 
-- versioning querying. Either softserial out, or some kind of light pulsing on startup, or with a specific button push. Easter egg!
-- software serial does not function at 1mHz. Even worth implementing? How else do we query version? Writing on board?
+-- Michael Cramer / @mikewebkist / cramer@webkist.com
 
-
-We'd love your help making the code better! Send comments, snippets, anything to hello@angellamackey.com .
-
-http://www.vegalite.com/ , 2014
-Angella Mackey, David NG McCallum, Johannes Omberg, and other smart people.
- */
-
-// *** SLEEP CODE
+*/
 
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
-#define BODS 7                   //BOD Sleep bit in MCUCR
-#define BODSE 2                  //BOD Sleep enable bit in MCUCR
-uint8_t mcucr1, mcucr2;
+#include <Adafruit_NeoPixel.h>
 
 // Hardware parameters //
 
-const byte ledPin0 = 0;
-const byte ledPin2 = 1;
-const byte ledPin1 = 4;
-const byte voltPin = 3;
-const byte buttonPin = 2;
+#define PIN 12
+#define BUTTON 5
+#define FET 1
+#define NUMLEDS 3
 
-
-const int doubleClickThresh = 500;    // time between double-clicks, otherwise goes to sleep
+unsigned long shutdownTimer;
 
 // When all lights solid, actually dimmed to reduce strain on the battery.
-//const byte solidBrightness = 32;       // no resistors
-//const byte solidBrightness = 64;
-//const byte solidBrightness = 128;     // now using gamma array. value of 128 corresponds to PWM of 64
-const byte solidBrightness = 192;
-//const byte solidBrightness = 255;
-
-const byte fashionBrightness = 96;
-const byte safetyBrightness = 192;
+const uint32_t solidBrightness = 192;
+const uint32_t safetyBrightness = 255;
+uint32_t fashionBrightness = safetyBrightness >> 2;
 
 // Flashing timing
-const byte framerate = 2;    // time between flashing frames
 int frameStep = 0;          // frame counter for flashing modes
-const int transitionRate = 3;    // fade time transitioning between modes
+long modeStartTime = 0;
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = -1;      // What state of the programme are we in?
+int state = 0; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
-byte currentLEDvalue[3] = { 0, 0, 0};
+uint32_t currentLEDvalue[NUMLEDS];
+byte colorMask[3] = { 255, 255, 255 };
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
-  // disable ADC, cut power consumption
-  ADCSRA = 0;
+    // setup_watchdog(9);
+    // ADCSRA &= ~_BV(ADEN); //disable ADC
 
-  //  Define pins
-  pinMode(buttonPin, INPUT_PULLUP);
-  pinMode(ledPin2, OUTPUT);
-  pinMode(ledPin0, OUTPUT);
-  pinMode(ledPin1, OUTPUT);
-  pinMode(voltPin, INPUT);
+    pinMode(FET,OUTPUT);
+    digitalWrite(FET,HIGH); //setup FET
 
-  startupFlash();    // flash to show that the programme's started
+    pinMode(PIN,OUTPUT);
+    digitalWrite(PIN,LOW); //setup LED signal bus
+    pinMode(BUTTON, INPUT_PULLUP);
 
-  goToSleep();    // sshhhh... there there...
+    randomSeed(analogRead(A8)+analogRead(A7));
+
+    strip.begin();
+
+    startupFlash(); // flash to show that the programme's started
+
+    // state = 99; // Start asleep.
 }
+
+long lastDebounceTime = 0;
+boolean lastButtonState = HIGH;
 
 void loop() {
-  buttonState = digitalRead(buttonPin);
+    fashionBrightness = (analogRead(A9) >> 1) + (safetyBrightness >> 3);
 
-  // All of the states set the currentLEDvalue, here we set the LEDs from those values
-  analogWrite(ledPin0, doGamma(currentLEDvalue[0]));
-  analogWrite(ledPin1, doGamma(currentLEDvalue[1]));
-  analogWrite(ledPin2, doGamma(currentLEDvalue[2]));
-
-  // ASLEEP, woken up
-  if (state == -1) {
-    if (buttonState == HIGH) {     // button released, wait for second button click
-      firstPressedTime = millis();
-      state++;
+    // Button debounce: still end up with buttonState having the
+    // proper value, it just may take a few loop()s.
+    boolean newButtonState = digitalRead(BUTTON);
+    if (newButtonState != lastButtonState) {
+        lastDebounceTime = millis();
     }
-  }
 
-  // Double-click
-  else if (state == 0) { // waiting for another click
-    int timeSinceFirstPress = millis() - firstPressedTime;
-    if (timeSinceFirstPress > doubleClickThresh) {
-      goToSleep();
-    }    // double click didn't happen in time, go back to sleep
-  }
+    if ((millis() - lastDebounceTime) > 50) { // debounce delay: 50ms
+        buttonState = newButtonState;
+    }
 
-  if (state > -1 && buttonState == LOW) {
-    pressed = 1;
-  } else if (pressed == 1 && buttonState == HIGH) {
-    state++;
-    pressed = 0;
-    // The number of modes
-    if (state > 10) {
-      state = 99;
-    } else if (state > 2) { // Turn everthing off when switching to a blinking mode.
-      currentLEDvalue[0] = 0; // set current value to 0 so that we can fade up.
-      currentLEDvalue[1] = 0;
-      currentLEDvalue[2] = 0;
-    }
-  }
+    lastButtonState = newButtonState;
 
-  // SAFETY SOLID
-  if (state == 1) {
-    if (currentLEDvalue[0] < safetyBrightness) {
-      currentLEDvalue[0]++;
-    }     // fade in to solidBrightness value
-    if (currentLEDvalue[1] < safetyBrightness) {
-      currentLEDvalue[1]++;
+    if (buttonState == LOW) {
+        pressed = 1;
+    } else if (pressed == 1 && buttonState == HIGH) {
+        state++;
+        pressed = 0;
+        // The number of modes
+        if (state > 2) { // Turn everthing off when switching to a blinking mode.
+            modeStartTime = millis();
+            for(int i=0; i<NUMLEDS; i++) {
+                currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
+            }
+        }
     }
-    if (currentLEDvalue[2] < safetyBrightness) {
-      currentLEDvalue[2]++;
-    }
-    delay(3);
-  }
 
-  // FASHION SOLID
-  else if (state == 2) {
-    if (currentLEDvalue[0] > fashionBrightness) {
-      currentLEDvalue[0]--;
-    }     // fade down to solidBrightness value
-    if (currentLEDvalue[1] > fashionBrightness) {
-      currentLEDvalue[1]--;
+    // All of the states set the currentLEDvalue, here we set the LEDs from those values
+    for(int i=0; i<NUMLEDS; i++) {
+        strip.setPixelColor(i, currentLEDvalue[i]);
     }
-    if (currentLEDvalue[2] > fashionBrightness) {
-      currentLEDvalue[2]--;
-    }
-    delay(3);
-  }
-  else if (state > 2 && state < 99) {
-    doFlashing(state);
-  }
+    strip.show();
 
-  // Waiting for button release to go to sleep
-  else if (state == 99) {
-    // linear fading
-    if (currentLEDvalue[0] > 0) {
-      currentLEDvalue[0]--;
+    if (state > 0 && state < 99) {
+        doFlashing(state);
     }
-    if (currentLEDvalue[1] > 0) {
-      currentLEDvalue[1]--;
+
+    // Waiting for button release to go to sleep
+    else if (state == 99) {
+        // linear fading
+        for(int i=0; i<NUMLEDS; i++) {
+            if (currentLEDvalue[i] > 0) {
+                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+            }
+        }
+        goToSleep();
     }
-    if (currentLEDvalue[2] > 0) {
-      currentLEDvalue[2]--;
-    }
-    delay(transitionRate);
-
-    if ((currentLEDvalue[0] + currentLEDvalue[1] + currentLEDvalue[2]) == 0) {
-      goToSleep();
-    }       // go to sleep when the button's been released and fading is done
-  }
-
-
 }
 
-// Flash pattern when the Edge turns on
+uint32_t fadeDown(uint32_t val) { return fadeDown(val, 0); }
+uint32_t fadeDown(uint32_t val, uint32_t lowVal) {
+    uint32_t r = (val >> 16) & 0xff;
+    uint32_t g = (val >> 8) & 0xff;
+    uint32_t b = val & 0xff;
+    if(r > lowVal) { r--; }
+    if(g > lowVal) { g--; }
+    if(b > lowVal) { b--; }
+    return r << 16 | g << 8 | b;
+}
+
+uint32_t fadeUp(uint32_t val) { return fadeUp(val, 255); }
+uint32_t fadeUp(uint32_t val, uint32_t highVal) {
+    uint32_t r = (val >> 16) & 0xff;
+    uint32_t g = (val >> 8) & 0xff;
+    uint32_t b = val & 0xff;
+    if(r < highVal) { r++; }
+    if(g < highVal) { g++; }
+    if(b < highVal) { b++; }
+    return r << 16 | g << 8 | b;
+}
+
 void startupFlash() {
-  // v 3.2.2 flash pattern
-  for (int i = 255; i > 0; i--) {
-    analogWrite(ledPin0, doGamma(i));
-    analogWrite(ledPin1, doGamma(int(float(i) * .66)));
-    analogWrite(ledPin2, doGamma(i));
-    delay(1);
-  }
-  for (int i = 255; i > 0; i--) {
-    analogWrite(ledPin0, doGamma(i));
-    analogWrite(ledPin1, doGamma(int(float(i) * .66)));
-    analogWrite(ledPin2, doGamma(i));
-    delay(1);
-  }
-
+    // v 3.2.2 flash pattern
+    for(int j=0; j<2; j++) {
+        for(int k = 255; k > 0; k--) {
+            for(int i=0; i<NUMLEDS; i++) {
+                strip.setPixelColor(i, doGamma(k));
+            }
+            strip.show();
+            delay(1);
+        }
+    }
 }
 
-void goToSleep(void)
-{
-  state = -1;
-  digitalWrite(ledPin0, LOW);
-  digitalWrite(ledPin1, LOW);
-  digitalWrite(ledPin2, LOW);
+void goToSleep(void) {
+    state = 0;
 
-  GIMSK |= _BV(INT0);                       //enable INT0
-  MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
-  //    MCUCR |= (1<<ISC00) | (1<<ISC01); // The rising edge of INT0 generates an interrupt request.
-  ACSR |= _BV(ACD);                         //disable the analog comparator
-  ADCSRA &= ~_BV(ADEN);                     //disable ADC
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  sleep_enable();
-  //turn off the brown-out detector.
-  //must have an ATtiny45 or ATtiny85 rev C or later for software to be able to disable the BOD.
-  //current while sleeping will be <0.5uA if BOD is disabled, <25uA if not.
-  cli();
-  mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);  //turn off the brown-out detector
-  mcucr2 = mcucr1 & ~_BV(BODSE);
-  MCUCR = mcucr1;
-  MCUCR = mcucr2;
-  sei();                         //ensure interrupts enabled so we can wake up again
-  sleep_cpu();                   //go to sleep
-  cli();                         //wake up here, disable interrupts
-  GIMSK = 0x00;                  //disable INT0
-  sleep_disable();
-  sei();                         //enable interrupts again (but INT0 is disabled from above)
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    sleep_enable();
+    PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
+    PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
+    PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
 
+    byte adcsra = ADCSRA;   // save ADCSRA
+    ADCSRA &= ~_BV(ADEN);   // disable ADC
+    cli();                  // stop interrupts to ensure the BOD timed sequence executes as required
+    sleep_bod_disable();    // disable brown out detection
+    sei();                  // ensure interrupts enabled so we can wake up again
+    sleep_cpu();            // go to sleep
+    sleep_disable();        // wake up here
+    PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
+    ADCSRA = adcsra;        // restore ADCSRA
 }
 
-ISR(INT0_vect) {
-}                  //nothing to actually do here, the interrupt just wakes us up!
+EMPTY_INTERRUPT(PCINT0_vect);
