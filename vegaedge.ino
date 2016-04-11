@@ -29,7 +29,8 @@ uint32_t fashionBrightness = safetyBrightness >> 2;
 
 // Flashing timing
 int frameStep = 0;          // frame counter for flashing modes
-long modeStartTime = 0;
+long modeStartTime = millis();
+const long sleepAfterSecs = 60 * 60 * 4; // 4 hours.
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
@@ -103,18 +104,17 @@ void loop() {
     }
     strip.show();
 
+    // Go to sleep if running for more than N seconds.
+    if((millis() - modeStartTime) > (sleepAfterSecs * 1000)) {
+        state = 99;
+    }
+
     if (state > 0 && state < 99) {
         doFlashing(state);
     }
 
     // Waiting for button release to go to sleep
     else if (state == 99) {
-        // linear fading
-        for(int i=0; i<NUMLEDS; i++) {
-            if (currentLEDvalue[i] > 0) {
-                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
-            }
-        }
         goToSleep();
     }
 }
@@ -155,6 +155,19 @@ void startupFlash() {
 }
 
 void goToSleep(void) {
+    uint32_t total = 1;
+    while (total != 0) {
+        for(int i=0; i<NUMLEDS; i++) {
+            if(currentLEDvalue[i] > 0) {
+                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+            }
+            strip.setPixelColor(i, currentLEDvalue[i]);
+            total |= currentLEDvalue[i];
+        }
+        strip.show();
+        delay(5);
+    }
+
     state = 0;
 
     digitalWrite(FET, LOW); // turn off FET
@@ -176,6 +189,7 @@ void goToSleep(void) {
 
     digitalWrite(FET,HIGH); // turn FET back on
     ADCSRA = adcsra;        // restore ADCSRA
+    modeStartTime = millis();
 }
 
 EMPTY_INTERRUPT(PCINT0_vect);
