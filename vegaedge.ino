@@ -35,7 +35,7 @@ long modeStartTime = 0;
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 0; // What state of the program are we in?
+int state = 1; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
@@ -52,7 +52,8 @@ void setup() {
 
     pinMode(PIN,OUTPUT);
     digitalWrite(PIN,LOW); //setup LED signal bus
-    pinMode(BUTTON, INPUT_PULLUP);
+
+    pinMode(BUTTON,INPUT_PULLUP);
 
     randomSeed(analogRead(A8)+analogRead(A7));
 
@@ -156,6 +157,8 @@ void startupFlash() {
 void goToSleep(void) {
     state = 0;
 
+    digitalWrite(FET, LOW); // turn off FET
+
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
     PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
@@ -170,6 +173,8 @@ void goToSleep(void) {
     sleep_cpu();            // go to sleep
     sleep_disable();        // wake up here
     PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
+
+    digitalWrite(FET,HIGH); // turn FET back on
     ADCSRA = adcsra;        // restore ADCSRA
 }
 
