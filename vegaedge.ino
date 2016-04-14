@@ -25,7 +25,7 @@ unsigned long shutdownTimer;
 // When all lights solid, actually dimmed to reduce strain on the battery.
 const uint32_t solidBrightness = 192;
 const uint32_t safetyBrightness = 255;
-uint32_t fashionBrightness = solidBrightness;
+uint32_t fashionBrightness = 128;
 
 // Flashing timing
 int frameStep = 0;          // frame counter for flashing modes
@@ -125,6 +125,13 @@ void loop() {
     }
 }
 
+boolean anyLit() {
+    for(int i=0; i<NUMLEDS; i++) {
+        if(currentLEDvalue[i] > 0) { return true; }
+    }
+    return false;
+}
+
 uint32_t fadeDown(uint32_t val) { return fadeDown(val, 0); }
 uint32_t fadeDown(uint32_t val, uint32_t lowVal) {
     uint32_t r = (val >> 16) & 0xff;
@@ -150,7 +157,7 @@ uint32_t fadeUp(uint32_t val, uint32_t highVal) {
 void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
-        for(int k = 255; k > 0; k--) {
+        for(int k = solidBrightness; k > 0; k--) {
             for(int i=0; i<NUMLEDS; i++) {
                 strip.setPixelColor(i, doGamma(k));
             }

@@ -105,20 +105,22 @@ void candle() {
 }
 
 void fireflies() {
-    static long nextFly[3] = {0, 0, 0};
     static int flyTime = 10000;      // max time between flashes on an LED
+    static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
     static long timeNow;
     static long fadeOn;
 
     timeNow = millis();
 
     if(timeNow > fadeOn) {
-        for(int i=0; i<NUMLEDS; i++) {
-            if(currentLEDvalue[i] > 0) {
-                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+        if(anyLit()) {
+            for(int i=0; i<NUMLEDS; i++) {
+                if(currentLEDvalue[i] > 0) {
+                    currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+                }
             }
+            fadeOn = timeNow + 5; // fade by one every 5 millis.
         }
-        fadeOn = timeNow + 5; // fade by one every 10 millis.
     }
 
     // flash the fly if its wait time has passed
@@ -127,9 +129,9 @@ void fireflies() {
             currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10));
             nextFly[x] = timeNow + random(flyTime);
         }
-        else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
-            nextFly[x] = timeNow + random(flyTime);
-        }
+        // else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
+        //     nextFly[x] = timeNow + random(flyTime);
+        // }
     }
 }
 
