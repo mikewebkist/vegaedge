@@ -30,7 +30,7 @@ uint32_t fashionBrightness = 128;
 // Flashing timing
 int frameStep = 0;          // frame counter for flashing modes
 long modeStartTime = millis();
-const long sleepAfterSecs = 60 * 60 * 1; // 1 hour.
+const long sleepAfterSecs = 60 * 60 * 6; // 6 hours.
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
@@ -95,7 +95,7 @@ void loop() {
         }
         pressed = 0;
         // The number of modes
-        if (state > 2) { // Turn everthing off when switching to a blinking mode.
+        if (state > 0) { // Turn everthing off when switching to a blinking mode.
             modeStartTime = millis();
             for(int i=0; i<NUMLEDS; i++) {
                 currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
