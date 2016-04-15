@@ -1,15 +1,16 @@
 void doFlashing(int flash_type) {
     switch(flash_type) {
-        case 1: goSolid(fashionBrightness); break;
-        case 2: mackeySpecial(); break;
-        case 3: candle(); break;
-        case 4: chasingMode(); break;
-        case 5: softNoise(); break;
-        case 6: fireflies(); break;
-        case 7: binaryCount(); break;
-        case 8: grayCount(); break;
-        case 9: flickerSunrise(); break;
-        case 10: strobe(); break;
+        case 1: candle(); break;
+        case 2: softNoise(); break;
+        case 3: fireflies(); break;
+        case 4: flickerSunrise(); break;
+        case 5: goSolid(safetyBrightness); break;
+        case 6: goSolid(fashionBrightness); break;
+        case 7: mackeySpecial(); break;
+        case 8: chasingMode(); break;
+        case 9: binaryCount(); break;
+        case 10: grayCount(); break;
+        case 11: strobe(); break;
         default: state = 99; break;
     }
 }
@@ -97,11 +98,11 @@ void candle() {
     100 still firelike
     200
     */
-    uint32_t r = 192 - random(32);
-    uint32_t g = 128 - random(32);
+    uint32_t r = 128 - random(24);
+    uint32_t g = 96 - random(8);
     uint32_t b = random(16);
 
-    currentLEDvalue[(millis()/10) % NUMLEDS] = doGamma(r, g, b);
+    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(r, g, b);
 }
 
 void fireflies() {
