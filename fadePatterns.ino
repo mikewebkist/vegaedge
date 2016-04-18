@@ -85,8 +85,8 @@ void softNoise() {
     200
     */
     //int counter = (millis()/200)%3;
-    if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
-        currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+    if ((millis() - modeStartTime) % 50 == 0) { // only change on the 500ms boundary
+        currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness));
     }
 }
 
@@ -139,9 +139,9 @@ void flickerSunrise() {
     int counter = (millis()/20)%256;
 
     // fade
-    currentLEDvalue[0] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[1] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[2] = doGamma(random(counter), random(counter), 0);
+    currentLEDvalue[0] = doGamma(random(counter) >> 2);
+    currentLEDvalue[1] = doGamma(random(counter) >> 2);
+    currentLEDvalue[2] = doGamma(random(counter));
 }
 
 void binaryCount() {
