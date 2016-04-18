@@ -15,7 +15,6 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 
 // Hardware parameters //
 
-#define PIN 12
 #define BUTTON 2
 #define FET 1
 #define NUMLEDS 3
@@ -40,7 +39,7 @@ const long sleepAfterSecs = 60 * 60 * 6; // 6 hours.
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 99; // What state of the program are we in?
+int state = 1; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
@@ -117,7 +116,7 @@ void loop() {
 
     // Go to sleep if running for more than N seconds.
     if((millis() - modeStartTime) > (sleepAfterSecs * 1000)) {
-        goToSleep();
+        // goToSleep();
     }
 
     if (state > 0 && state < 99) {
@@ -164,10 +163,9 @@ void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
         for(int k = solidBrightness; k > 0; k--) {
-            for(int i=0; i<NUMLEDS; i++) {
-                // strip.setPixelColor(i, doGamma(k));
-            }
-            // strip.show();
+            analogWrite(ledPin0, k);
+            analogWrite(ledPin1, k);
+            analogWrite(ledPin2, k);
             delay(1);
         }
     }
@@ -183,6 +181,10 @@ void goToSleep(void) {
 
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
+    GIMSK |= _BV(INT0);                       //enable INT0
+    MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
+    GIMSK = 0x00;                  //disable INT0
+
     // PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
     // PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
     // PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
@@ -201,4 +203,4 @@ void goToSleep(void) {
     modeStartTime = millis();
 }
 
-EMPTY_INTERRUPT(PCINT0_vect);
+EMPTY_INTERRUPT(INT0_vect);
