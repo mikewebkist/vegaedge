@@ -11,14 +11,18 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 
 #include <avr/sleep.h>
 #include <avr/interrupt.h>
-#include <Adafruit_NeoPixel.h>
+// #include <Adafruit_NeoPixel.h>
 
 // Hardware parameters //
 
 #define PIN 12
-#define BUTTON 5
+#define BUTTON 2
 #define FET 1
 #define NUMLEDS 3
+
+const byte ledPin0 = 0;
+const byte ledPin2 = 1;
+const byte ledPin1 = 4;
 
 unsigned long shutdownTimer;
 
@@ -39,23 +43,26 @@ int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
+// Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
     // setup_watchdog(9);
     // ADCSRA &= ~_BV(ADEN); //disable ADC
+    pinMode(ledPin2, OUTPUT);
+    pinMode(ledPin0, OUTPUT);
+    pinMode(ledPin1, OUTPUT);
 
-    pinMode(FET,OUTPUT);
-    digitalWrite(FET,HIGH); //setup FET
+    // pinMode(FET,OUTPUT);
+    // digitalWrite(FET,HIGH); //setup FET
 
-    pinMode(PIN,OUTPUT);
-    digitalWrite(PIN,LOW); //setup LED signal bus
+    // pinMode(PIN,OUTPUT);
+    // digitalWrite(PIN,LOW); //setup LED signal bus
 
     pinMode(BUTTON,INPUT_PULLUP);
 
-    randomSeed(analogRead(A8)+analogRead(A7));
+    // randomSeed(analogRead(A8)+analogRead(A7));
 
-    strip.begin();
+    // strip.begin();
 
     startupFlash(); // flash to show that the programme's started
 }
@@ -122,10 +129,9 @@ void allLEDs(uint32_t val) {
 }
 
 void latchLEDs() {
-    for(int i=0; i<NUMLEDS; i++) {
-        strip.setPixelColor(i, currentLEDvalue[i]);
-    }
-    strip.show();
+    analogWrite(ledPin0, doGamma(currentLEDvalue[0]));
+    analogWrite(ledPin1, doGamma(currentLEDvalue[1]));
+    analogWrite(ledPin2, doGamma(currentLEDvalue[2]));
 }
 
 boolean anyLit() {
@@ -176,9 +182,9 @@ void goToSleep(void) {
 
     set_sleep_mode(SLEEP_MODE_PWR_DOWN);
     sleep_enable();
-    PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
-    PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
-    PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
+    // PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
+    // PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
+    // PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
 
     byte adcsra = ADCSRA;   // save ADCSRA
     ADCSRA &= ~_BV(ADEN);   // disable ADC
@@ -187,7 +193,7 @@ void goToSleep(void) {
     sei();                  // ensure interrupts enabled so we can wake up again
     sleep_cpu();            // go to sleep
     sleep_disable();        // wake up here
-    PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
+    // PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
     fromSleep = true;
     digitalWrite(FET,HIGH); // turn FET back on
     ADCSRA = adcsra;        // restore ADCSRA
