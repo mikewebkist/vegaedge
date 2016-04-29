@@ -2,7 +2,7 @@ void doFlashing(int flash_type) {
     switch(flash_type) {
         case 1: candle(); break;
         case 2: softNoise(); break;
-        case 3: strobe(); break;
+        case 3: fireflies(); break;
         case 4: flickerSunrise(); break;
         case 5: goSolid(safetyBrightness); break;
         case 6: goSolid(fashionBrightness); break;
@@ -26,13 +26,13 @@ void goSolid(byte brightness) {
     delay(3);
 }
 
-// void chasingMode() {
-//     for(int i=0; i<NUMLEDS; i++) {
-//         currentLEDvalue[i] = doGamma(getChase(frameStep, i % 3));// * fashionBrightness / 255);
-//     }
-//     delay(3);
-//     frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.
-// }
+void chasingMode() {
+    for(int i=0; i<NUMLEDS; i++) {
+        currentLEDvalue[i] = doGamma(getChase(frameStep, i % 3));// * fashionBrightness / 255);
+    }
+    delay(3);
+    frameStep = (frameStep + 1) % 256;  // reset! consider variable-length flash pattern, then 255 should be something else.
+}
 
 void mackeySpecial() {
     currentLEDvalue[1] = 0;
@@ -104,44 +104,45 @@ void candle() {
     currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(r, g, b);
 }
 
-// void fireflies() {
-//     static int flyTime = 10000;      // max time between flashes on an LED
-//     static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
-//     static long timeNow;
-//     static long fadeOn;
-//
-//     timeNow = millis();
-//
-//     if(timeNow > fadeOn) {
-//         if(anyLit()) {
-//             for(int i=0; i<NUMLEDS; i++) {
-//                 if(currentLEDvalue[i] > 0) {
-//                     currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
-//                 }
-//             }
-//             fadeOn = timeNow + 5; // fade by one every 5 millis.
-//         }
-//     }
-//
-//     // flash the fly if its wait time has passed
-//     for (int x=0; x<NUMLEDS; x++){
-//         if (timeNow > nextFly[x]) {
-//             currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10));
-//             nextFly[x] = timeNow + random(flyTime);
-//         }
-//         // else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
-//         //     nextFly[x] = timeNow + random(flyTime);
-//         // }
-//     }
-// }
+void fireflies() {
+    static int flyTime = 10000;      // max time between flashes on an LED
+    // static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
+    static long nextFly[3] = { 0, 0, 0 };
+    static long timeNow;
+    static long fadeOn;
+
+    timeNow = millis();
+
+    if(timeNow > fadeOn) {
+        if(anyLit()) {
+            for(int i=0; i<NUMLEDS; i++) {
+                if(currentLEDvalue[i] > 0) {
+                    currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+                }
+            }
+            fadeOn = timeNow + 5; // fade by one every 5 millis.
+        }
+    }
+
+    // flash the fly if its wait time has passed
+    for (int x=0; x<NUMLEDS; x++){
+        if (timeNow > nextFly[x]) {
+            currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10));
+            nextFly[x] = timeNow + random(flyTime);
+        }
+        // else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
+        //     nextFly[x] = timeNow + random(flyTime);
+        // }
+    }
+}
 
 void flickerSunrise() {
     int counter = (millis()/20)%256;
 
     // fade
-    currentLEDvalue[0] = doGamma(random(counter) >> 2);
-    currentLEDvalue[1] = doGamma(random(counter) >> 2);
-    currentLEDvalue[2] = doGamma(random(counter));
+    currentLEDvalue[0] = doGamma(random(counter) >> 1);
+    currentLEDvalue[1] = doGamma(random(counter));
+    currentLEDvalue[2] = doGamma(random(counter) >> 1);
 }
 
 void binaryCount() {
