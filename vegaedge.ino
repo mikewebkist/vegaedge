@@ -13,6 +13,10 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 #include <avr/interrupt.h>
 // #include <Adafruit_NeoPixel.h>
 
+#define BODS 7                   //BOD Sleep bit in MCUCR
+#define BODSE 2                  //BOD Sleep enable bit in MCUCR
+uint8_t mcucr1, mcucr2;
+
 // Hardware parameters //
 
 #define BUTTON 2
@@ -177,29 +181,27 @@ void goToSleep(void) {
     allLEDs(0);
     latchLEDs();
 
-    digitalWrite(FET, LOW); // turn off FET
-
-    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-    sleep_enable();
     GIMSK |= _BV(INT0);                       //enable INT0
     MCUCR &= ~(_BV(ISC01) | _BV(ISC00));      //INT0 on low level
+    //    MCUCR |= (1<<ISC00) | (1<<ISC01); // The rising edge of INT0 generates an interrupt request.
+    ACSR |= _BV(ACD);                         //disable the analog comparator
+    ADCSRA &= ~_BV(ADEN);                     //disable ADC
+    set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+    sleep_enable();
+    //turn off the brown-out detector.
+    //must have an ATtiny45 or ATtiny85 rev C or later for software to be able to disable the BOD.
+    //current while sleeping will be <0.5uA if BOD is disabled, <25uA if not.
+    cli();
+    mcucr1 = MCUCR | _BV(BODS) | _BV(BODSE);  //turn off the brown-out detector
+    mcucr2 = mcucr1 & ~_BV(BODSE);
+    MCUCR = mcucr1;
+    MCUCR = mcucr2;
+    sei();                         //ensure interrupts enabled so we can wake up again
+    sleep_cpu();                   //go to sleep
+    cli();                         //wake up here, disable interrupts
     GIMSK = 0x00;                  //disable INT0
-
-    // PCMSK0 |= _BV(PCINT7);  // button is connected to PCINT7
-    // PCIFR  |= _BV(PCIF0);   // clear any outstanding interrupts for PCINT[7:0]
-    // PCICR  |= _BV(PCIE0);   // enable pin change interrupts for PCINT[7:0]
-
-    byte adcsra = ADCSRA;   // save ADCSRA
-    ADCSRA &= ~_BV(ADEN);   // disable ADC
-    cli();                  // stop interrupts to ensure the BOD timed sequence executes as required
-    sleep_bod_disable();    // disable brown out detection
-    sei();                  // ensure interrupts enabled so we can wake up again
-    sleep_cpu();            // go to sleep
-    sleep_disable();        // wake up here
-    // PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
-    fromSleep = true;
-    digitalWrite(FET,HIGH); // turn FET back on
-    ADCSRA = adcsra;        // restore ADCSRA
+    sleep_disable();
+    sei();                         //enable interrupts again (but INT0 is disabled from above)
     modeStartTime = millis();
 }
 
