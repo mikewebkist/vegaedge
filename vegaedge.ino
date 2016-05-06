@@ -23,12 +23,10 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 unsigned long shutdownTimer;
 
 // When all lights solid, actually dimmed to reduce strain on the battery.
-const uint32_t solidBrightness = 192;
 const uint32_t safetyBrightness = 255;
 uint32_t fashionBrightness = 128;
 
 // Flashing timing
-int frameStep = 0;          // frame counter for flashing modes
 long modeStartTime = millis();
 const long sleepAfterSecs = 60 * 60 * 6; // 6 hours.
 
@@ -40,7 +38,6 @@ int state = 99; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
-byte colorMask[3] = { 255, 255, 255 };
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
 
@@ -61,8 +58,6 @@ void setup() {
     strip.begin();
 
     startupFlash(); // flash to show that the programme's started
-
-    // state = 99; // Start asleep.
 }
 
 long lastDebounceTime = 0;
@@ -97,17 +92,12 @@ void loop() {
         // The number of modes
         if (state > 0) { // Turn everthing off when switching to a blinking mode.
             modeStartTime = millis();
-            for(int i=0; i<NUMLEDS; i++) {
-                currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
-            }
+            allLEDs(0); // set current value to 0 so that we can fade up.
         }
     }
 
     // All of the states set the currentLEDvalue, here we set the LEDs from those values
-    for(int i=0; i<NUMLEDS; i++) {
-        strip.setPixelColor(i, currentLEDvalue[i]);
-    }
-    strip.show();
+    latchLEDs();
 
     // Go to sleep if running for more than N seconds.
     if((millis() - modeStartTime) > (sleepAfterSecs * 1000)) {
@@ -123,6 +113,19 @@ void loop() {
         state = 1;
         goToSleep();
     }
+}
+
+void allLEDs(uint32_t val) {
+    for(int i=0; i<NUMLEDS; i++) {
+        currentLEDvalue[i] = val;
+    }
+}
+
+void latchLEDs() {
+    for(int i=0; i<NUMLEDS; i++) {
+        strip.setPixelColor(i, currentLEDvalue[i]);
+    }
+    strip.show();
 }
 
 boolean anyLit() {
@@ -157,21 +160,17 @@ uint32_t fadeUp(uint32_t val, uint32_t highVal) {
 void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
-        for(int k = solidBrightness; k > 0; k--) {
-            for(int i=0; i<NUMLEDS; i++) {
-                strip.setPixelColor(i, doGamma(k));
-            }
-            strip.show();
+        for(int k = safetyBrightness; k > 0; k--) {
+            allLEDs(doGamma(k));
+            latchLEDs();
             delay(1);
         }
     }
 }
 
 void goToSleep(void) {
-    for(int i=0; i<NUMLEDS; i++) {
-        strip.setPixelColor(i, 0);
-    }
-    strip.show();
+    allLEDs(0);
+    latchLEDs();
 
     digitalWrite(FET, LOW); // turn off FET
 

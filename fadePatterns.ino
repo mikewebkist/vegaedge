@@ -27,6 +27,8 @@ void goSolid(byte brightness) {
 }
 
 void chasingMode() {
+    static int frameStep = 0;
+
     for(int i=0; i<NUMLEDS; i++) {
         currentLEDvalue[i] = doGamma(getChase(frameStep, i % 3));// * fashionBrightness / 255);
     }
@@ -66,9 +68,7 @@ void strobe() {
 
     static int goNow;
     goNow = millis()/100;
-    currentLEDvalue[0] = doGamma((goNow % 2) != 0 ? 255 : 0);
-    currentLEDvalue[1] = doGamma((goNow % 2) != 0 ? 255 : 0);
-    currentLEDvalue[2] = doGamma((goNow % 2) != 0 ? 255 : 0);
+    allLEDs(doGamma((goNow % 2) != 0 ? 255 : 0));
 }
 
 void noise() {
