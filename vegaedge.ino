@@ -25,17 +25,18 @@ unsigned long shutdownTimer;
 // When all lights solid, actually dimmed to reduce strain on the battery.
 const uint32_t solidBrightness = 192;
 const uint32_t safetyBrightness = 255;
-uint32_t fashionBrightness = safetyBrightness >> 2;
+uint32_t fashionBrightness = 128;
 
 // Flashing timing
 int frameStep = 0;          // frame counter for flashing modes
-long modeStartTime = 0;
+long modeStartTime = millis();
+const long sleepAfterSecs = 60 * 60 * 6; // 6 hours.
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 1; // What state of the program are we in?
+int state = 99; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
@@ -66,9 +67,10 @@ void setup() {
 
 long lastDebounceTime = 0;
 boolean lastButtonState = HIGH;
+boolean fromSleep = false;
 
 void loop() {
-    fashionBrightness = (analogRead(A9) >> 1) + (safetyBrightness >> 3);
+    // fashionBrightness = (analogRead(A9) >> 1) + (safetyBrightness >> 3);
 
     // Button debounce: still end up with buttonState having the
     // proper value, it just may take a few loop()s.
@@ -86,10 +88,14 @@ void loop() {
     if (buttonState == LOW) {
         pressed = 1;
     } else if (pressed == 1 && buttonState == HIGH) {
-        state++;
+        if(fromSleep) { // Don't change mode when waking.
+            fromSleep=false;
+        } else {
+            state++;
+        }
         pressed = 0;
         // The number of modes
-        if (state > 2) { // Turn everthing off when switching to a blinking mode.
+        if (state > 0) { // Turn everthing off when switching to a blinking mode.
             modeStartTime = millis();
             for(int i=0; i<NUMLEDS; i++) {
                 currentLEDvalue[i] = 0; // set current value to 0 so that we can fade up.
@@ -103,20 +109,27 @@ void loop() {
     }
     strip.show();
 
+    // Go to sleep if running for more than N seconds.
+    if((millis() - modeStartTime) > (sleepAfterSecs * 1000)) {
+        goToSleep();
+    }
+
     if (state > 0 && state < 99) {
         doFlashing(state);
     }
 
-    // Waiting for button release to go to sleep
+    // Last mode, go to sleep.
     else if (state == 99) {
-        // linear fading
-        for(int i=0; i<NUMLEDS; i++) {
-            if (currentLEDvalue[i] > 0) {
-                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
-            }
-        }
+        state = 1;
         goToSleep();
     }
+}
+
+boolean anyLit() {
+    for(int i=0; i<NUMLEDS; i++) {
+        if(currentLEDvalue[i] > 0) { return true; }
+    }
+    return false;
 }
 
 uint32_t fadeDown(uint32_t val) { return fadeDown(val, 0); }
@@ -144,7 +157,7 @@ uint32_t fadeUp(uint32_t val, uint32_t highVal) {
 void startupFlash() {
     // v 3.2.2 flash pattern
     for(int j=0; j<2; j++) {
-        for(int k = 255; k > 0; k--) {
+        for(int k = solidBrightness; k > 0; k--) {
             for(int i=0; i<NUMLEDS; i++) {
                 strip.setPixelColor(i, doGamma(k));
             }
@@ -155,7 +168,10 @@ void startupFlash() {
 }
 
 void goToSleep(void) {
-    state = 0;
+    for(int i=0; i<NUMLEDS; i++) {
+        strip.setPixelColor(i, 0);
+    }
+    strip.show();
 
     digitalWrite(FET, LOW); // turn off FET
 
@@ -173,9 +189,10 @@ void goToSleep(void) {
     sleep_cpu();            // go to sleep
     sleep_disable();        // wake up here
     PCMSK0 &= ~_BV(PCINT7); // turn off interrupts for PCINT7
-
+    fromSleep = true;
     digitalWrite(FET,HIGH); // turn FET back on
     ADCSRA = adcsra;        // restore ADCSRA
+    modeStartTime = millis();
 }
 
 EMPTY_INTERRUPT(PCINT0_vect);

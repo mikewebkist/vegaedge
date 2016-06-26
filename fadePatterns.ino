@@ -1,15 +1,16 @@
 void doFlashing(int flash_type) {
     switch(flash_type) {
-        case 1: goSolid(fashionBrightness); break;
-        case 2: mackeySpecial(); break;
-        case 3: candle(); break;
-        case 4: chasingMode(); break;
-        case 5: softNoise(); break;
-        case 6: fireflies(); break;
-        case 7: binaryCount(); break;
-        case 8: grayCount(); break;
-        case 9: flickerSunrise(); break;
-        case 10: strobe(); break;
+        case 1: candle(); break;
+        case 2: softNoise(); break;
+        case 3: fireflies(); break;
+        case 4: flickerSunrise(); break;
+        case 5: goSolid(safetyBrightness); break;
+        case 6: goSolid(fashionBrightness); break;
+        case 7: mackeySpecial(); break;
+        case 8: chasingMode(); break;
+        case 9: binaryCount(); break;
+        case 10: grayCount(); break;
+        case 11: strobe(); break;
         default: state = 99; break;
     }
 }
@@ -64,11 +65,10 @@ void strobe() {
     */
 
     static int goNow;
-    goNow = (millis()/20)%2;
-    currentLEDvalue[0] = doGamma(goNow * 255 >> 1);
-    currentLEDvalue[1] = doGamma(goNow * 255);
-    currentLEDvalue[2] = doGamma(goNow * 255 >> 1);
-
+    goNow = millis()/100;
+    currentLEDvalue[0] = doGamma((goNow % 2) != 0 ? 255 : 0);
+    currentLEDvalue[1] = doGamma((goNow % 2) != 0 ? 255 : 0);
+    currentLEDvalue[2] = doGamma((goNow % 2) != 0 ? 255 : 0);
 }
 
 void noise() {
@@ -97,39 +97,41 @@ void candle() {
     100 still firelike
     200
     */
-    uint32_t r = 192 - random(32);
-    uint32_t g = 128 - random(32);
+    uint32_t r = 128 - random(24);
+    uint32_t g = 96 - random(8);
     uint32_t b = random(16);
 
-    currentLEDvalue[(millis()/10) % NUMLEDS] = doGamma(r, g, b);
+    currentLEDvalue[(millis()/50) % NUMLEDS] = doGamma(r, g, b);
 }
 
 void fireflies() {
-    static long nextFly[3] = {0, 0, 0};
-
-    static uint32_t fireflyFade = 0x010100;
     static int flyTime = 10000;      // max time between flashes on an LED
+    static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
     static long timeNow;
+    static long fadeOn;
 
     timeNow = millis();
 
-    // flash the fly if its wait time has passed
-    for (int x = 0; x < NUMLEDS; x++){
-        if (timeNow > nextFly[x]) {
-            uint32_t flyGlow = fashionBrightness;
-            currentLEDvalue[x] = doGamma(flyGlow, flyGlow, 0);
-            nextFly[x] = timeNow + random(flyTime);
-        }
-        else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
-            nextFly[x] = timeNow + random(flyTime);
+    if(timeNow > fadeOn) {
+        if(anyLit()) {
+            for(int i=0; i<NUMLEDS; i++) {
+                if(currentLEDvalue[i] > 0) {
+                    currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+                }
+            }
+            fadeOn = timeNow + 5; // fade by one every 5 millis.
         }
     }
 
-    // fade
-    for(int i=0; i<NUMLEDS; i++) {
-        if(currentLEDvalue[i] > 0) {
-            currentLEDvalue[i] = currentLEDvalue[i] - fireflyFade;
+    // flash the fly if its wait time has passed
+    for (int x=0; x<NUMLEDS; x++){
+        if (timeNow > nextFly[x]) {
+            currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10));
+            nextFly[x] = timeNow + random(flyTime);
         }
+        // else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
+        //     nextFly[x] = timeNow + random(flyTime);
+        // }
     }
 }
 
