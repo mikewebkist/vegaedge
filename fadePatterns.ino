@@ -85,9 +85,9 @@ void softNoise() {
     200
     */
     //int counter = (millis()/200)%3;
-    if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
-        currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
-    }
+    // if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
+        currentLEDvalue[((millis() - modeStartTime) / NUMLEDS) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+    // }
 }
 
 void candle() {
@@ -106,7 +106,8 @@ void candle() {
 
 void fireflies() {
     static int flyTime = 10000;      // max time between flashes on an LED
-    static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
+    // static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
+    static long nextFly[NUMLEDS];
     static long timeNow;
     static long fadeOn;
 
@@ -155,7 +156,7 @@ void binaryCount() {
         for(int i=0; i<NUMLEDS; i++) {
             currentLEDvalue[i] = doGamma(((n >> i) & 1) * fashionBrightness);
         }
-        n = ++n % 8;
+        n = ++n % (1 << NUMLEDS);
         nextTime = timeNow + nextIncrement;
     }
 }

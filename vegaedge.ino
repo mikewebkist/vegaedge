@@ -15,10 +15,10 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 
 // Hardware parameters //
 
-#define PIN 12
+#define PIN 11
 #define BUTTON 5
 #define FET 1
-#define NUMLEDS 3
+#define NUMLEDS 8
 
 unsigned long shutdownTimer;
 
