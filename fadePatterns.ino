@@ -105,7 +105,7 @@ void candle() {
 }
 
 void fireflies() {
-    static int flyTime = 10000;      // max time between flashes on an LED
+    static int flyTime = 5000;      // max time between flashes on an LED
     static long nextFly[3] = { random(flyTime) + modeStartTime, random(flyTime) + modeStartTime, random(flyTime) + modeStartTime };
     static long timeNow;
     static long fadeOn;
