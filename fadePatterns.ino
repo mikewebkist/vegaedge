@@ -76,9 +76,9 @@ void strobe() {
 }
 
 void noise() {
-    currentLEDvalue[0] = doGamma(random(fashionBrightness));
-    currentLEDvalue[1] = doGamma(random(fashionBrightness));
-    currentLEDvalue[2] = doGamma(random(fashionBrightness));
+    for(int i=0; i<NUMLEDS; i++) {
+        currentLEDvalue[i] = doGamma(random(fashionBrightness));
+    }
 }
 
 void ledSpin() {
@@ -90,7 +90,7 @@ void ledSpin() {
     long timeNow = millis();
 
     if(timeNow > nextLEDtime) {
-        currentLEDvalue[nextLED++] = doGamma(fashionBrightness);
+        currentLEDvalue[nextLED++] = doGamma(fashionBrightness, 0, 0);
         nextLEDtime = timeNow + spinFade;
         nextLED = nextLED % NUMLEDS;
     }
@@ -106,10 +106,18 @@ void ledSpin() {
 }
 
 void colorFade() {
-    static long fadeOn = modeStartTime;
-    static uint32_t colors[3] = { safetyBrightness, 0, 0 };
-    static int dec = 0;
-    static int inc = 1;
+    static long fadeOn;
+    static uint32_t colors[3];
+    static int dec;
+    static int inc;
+
+    if(modeFirstRun) {
+        colors[0] = safetyBrightness;
+        colors[1] = colors[2] = 0;
+        dec=0;
+        inc=1;
+        fadeOn = modeStartTime;
+    }
 
     long timeNow = millis();
 
@@ -128,15 +136,12 @@ void colorFade() {
 }
 
 void softNoise() {
-    /*
-    50 fire-like flicker
-    10 spzzy fire
-    100 still firelike
-    200
-    */
-    //int counter = (millis()/200)%3;
-    if ((millis() - modeStartTime) % 500 == 0) { // only change on the 500ms boundary
-        currentLEDvalue[((millis() - modeStartTime) / 50) % NUMLEDS] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+    static long switchTime = modeStartTime;
+    long timeNow = millis();
+
+    if(timeNow > switchTime) {
+        currentLEDvalue[random(NUMLEDS)] = doGamma(random(fashionBrightness),random(fashionBrightness),random(fashionBrightness));
+        switchTime = timeNow + 100; // switch every 100ms
     }
 }
 
@@ -189,9 +194,9 @@ void flickerSunrise() {
     int counter = (millis()/20)%256;
 
     // fade
-    currentLEDvalue[0] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[1] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[2] = doGamma(random(counter), random(counter), 0);
+    for (int x=0; x<NUMLEDS; x++) {
+        currentLEDvalue[x] = (x % 3) ? doGamma(0, random(counter) >> 2, 0) : doGamma(random(counter), random(counter), 0);
+    }
 }
 
 void binaryCount() {

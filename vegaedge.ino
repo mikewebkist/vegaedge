@@ -1,4 +1,4 @@
-/*
+    /*
 
 Based on code from the Vega Edge Kickstarter project, heavily modified.
 - for more information see http://www.vegalite.com/nerds .
@@ -84,6 +84,7 @@ void loop() {
     if (buttonState == LOW) {
         pressed = 1;
     } else if (pressed == 1 && buttonState == HIGH) {
+        modeFirstRun=true;
         if(fromSleep) { // Don't change mode when waking.
             fromSleep=false;
         } else {
@@ -107,6 +108,7 @@ void loop() {
 
     if (state > 0 && state < 99) {
         doFlashing(state);
+        modeFirstRun = false;
     }
 
     // Last mode, go to sleep.
