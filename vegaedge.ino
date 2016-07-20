@@ -28,7 +28,8 @@ uint32_t fashionBrightness = 128;
 
 // Flashing timing
 long modeStartTime = millis();
-const long sleepAfterSecs = 60 * 60 * 6; // 6 hours.
+boolean modeFirstRun = true;
+const long sleepAfterSecs = 0; // never sleep.
 
 // Interface memorizing
 boolean buttonState;             // the current reading from the input pin
@@ -100,7 +101,7 @@ void loop() {
     latchLEDs();
 
     // Go to sleep if running for more than N seconds.
-    if((millis() - modeStartTime) > (sleepAfterSecs * 1000)) {
+    if((sleepAfterSecs > 0) && ((millis() - modeStartTime) > (sleepAfterSecs * 1000))) {
         goToSleep();
     }
 

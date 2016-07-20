@@ -1,16 +1,20 @@
 void doFlashing(int flash_type) {
     switch(flash_type) {
         case 1: candle(); break;
-        case 2: softNoise(); break;
+        case 2: colorFade(); break;
         case 3: fireflies(); break;
-        case 4: flickerSunrise(); break;
-        case 5: goSolid(safetyBrightness); break;
-        case 6: goSolid(fashionBrightness); break;
-        case 7: mackeySpecial(); break;
-        case 8: chasingMode(); break;
-        case 9: binaryCount(); break;
-        case 10: grayCount(); break;
-        case 11: strobe(); break;
+        case 4: ledSpin(); break;
+        case 5: flickerSunrise(); break;
+        case 6: noise(); break;
+        case 7: softNoise(); break;
+        case 8: mackeySpecial(); break;
+        case 9: chasingMode(); break;
+        case 10: binaryCount(); break;
+        case 11: grayCount(); break;
+        case 12: johnsonCounter(); break;
+        case 13: strobe(); break;
+        case 14: goSolid(safetyBrightness); break;
+        case 15: goSolid(fashionBrightness); break;
         default: state = 99; break;
     }
 }
@@ -75,6 +79,52 @@ void noise() {
     currentLEDvalue[0] = doGamma(random(fashionBrightness));
     currentLEDvalue[1] = doGamma(random(fashionBrightness));
     currentLEDvalue[2] = doGamma(random(fashionBrightness));
+}
+
+void ledSpin() {
+    long spinFade = 100; // Fade time
+    static long fadeOn = modeStartTime;
+    static int nextLED = 0;
+    static long nextLEDtime = millis();
+
+    long timeNow = millis();
+
+    if(timeNow > nextLEDtime) {
+        currentLEDvalue[nextLED++] = doGamma(fashionBrightness);
+        nextLEDtime = timeNow + spinFade;
+        nextLED = nextLED % NUMLEDS;
+    }
+
+    if(timeNow > fadeOn) {
+        for(int i=0; i<NUMLEDS; i++) {
+            if(currentLEDvalue[i] > 0) {
+                currentLEDvalue[i] = fadeDown(currentLEDvalue[i]);
+            }
+        }
+        fadeOn = timeNow + 5; // fade by one every 5 millis.
+    }
+}
+
+void colorFade() {
+    static long fadeOn = modeStartTime;
+    static uint32_t colors[3] = { safetyBrightness, 0, 0 };
+    static int dec = 0;
+    static int inc = 1;
+
+    long timeNow = millis();
+
+    if(timeNow > fadeOn) {
+        colors[dec]--;
+        colors[inc]++;
+        for(int i=0; i<NUMLEDS; i++) {
+            currentLEDvalue[i] = doGamma(colors[0], colors[1], colors[2]);
+        }
+        if(colors[dec] == 0) {
+            dec = (dec + 1) % 3;
+            inc = (dec + 1) % 3;
+        }
+        fadeOn = timeNow + 15; // fade by one every 5 millis.
+    }
 }
 
 void softNoise() {
@@ -179,20 +229,20 @@ void grayCount() {
     }
 }
 
-// void johnsonCounter() {
-//     // http://en.wikipedia.org/wiki/Ring_counter#Four-bit_ring_counter_sequences
-//     static byte n = 0;
-//     const unsigned long nextIncrement = 100;
-//     static unsigned long nextTime = 0;
-//     unsigned long timeNow;
-//
-//     timeNow = millis();
-//     if (timeNow > nextTime) {
-//         // Take LSB, flip it, move it to MSB, shift byte right 1 bit.
-//         n = (n & 1 ^ 1) << 2 | n >> 1;
-//         currentLEDvalue[0] =  (n &  1)      * fashionBrightness;
-//         currentLEDvalue[1] = ((n >> 1) & 1) * fashionBrightness;
-//         currentLEDvalue[2] = ((n >> 2) & 1) * fashionBrightness;
-//         nextTime = timeNow + nextIncrement;
-//     }
-// }
+void johnsonCounter() {
+    // http://en.wikipedia.org/wiki/Ring_counter#Four-bit_ring_counter_sequences
+    static byte n = 0;
+    const unsigned long nextIncrement = 100;
+    static unsigned long nextTime = 0;
+    unsigned long timeNow;
+
+    timeNow = millis();
+    if (timeNow > nextTime) {
+        // Take LSB, flip it, move it to MSB, shift byte right 1 bit.
+        n = (n & 1 ^ 1) << 2 | n >> 1;
+        currentLEDvalue[0] = doGamma((n &  1)      * fashionBrightness);
+        currentLEDvalue[1] = doGamma(((n >> 1) & 1) * fashionBrightness);
+        currentLEDvalue[2] = doGamma(((n >> 2) & 1) * fashionBrightness);
+        nextTime = timeNow + nextIncrement;
+    }
+}
