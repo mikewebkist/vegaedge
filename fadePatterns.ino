@@ -127,7 +127,7 @@ void fireflies() {
     // flash the fly if its wait time has passed
     for (int x=0; x<NUMLEDS; x++){
         if (timeNow > nextFly[x]) {
-            currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10));
+            currentLEDvalue[x] = doGamma(fashionBrightness - random(fashionBrightness / 25), fashionBrightness, random(fashionBrightness / 10), 0);
             nextFly[x] = timeNow + random(flyTime);
         }
         // else if ((timeNow - nextFly[x]) > flyTime) {    // eliminate weird persistence from previous iterations
@@ -140,9 +140,9 @@ void flickerSunrise() {
     int counter = (millis()/20)%256;
 
     // fade
-    currentLEDvalue[0] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[1] = doGamma(0, random(counter) >> 2, 0);
-    currentLEDvalue[2] = doGamma(random(counter), random(counter), 0);
+    currentLEDvalue[0] = doGamma(0, random(counter) >> 2, 0, 0);
+    currentLEDvalue[1] = doGamma(0, random(counter) >> 2, 0, 0);
+    currentLEDvalue[2] = doGamma(random(counter), random(counter), 0, 0);
 }
 
 void binaryCount() {

@@ -15,10 +15,10 @@ Thanks Angella Mackey, David NG McCallum, Johannes Omberg, and other smart peopl
 
 // Hardware parameters //
 
-#define PIN 11
+#define PIN 6
 #define BUTTON 5
 #define FET 1
-#define NUMLEDS 8
+#define NUMLEDS 16
 
 unsigned long shutdownTimer;
 
@@ -42,7 +42,7 @@ int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
 byte colorMask[3] = { 255, 255, 255 };
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMLEDS, PIN, NEO_RGBW + NEO_KHZ800);
 
 void setup() {
     // setup_watchdog(9);
