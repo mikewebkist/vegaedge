@@ -108,14 +108,15 @@ void ledSpin() {
 void colorFade() {
     static long fadeOn;
     static uint32_t colors[3];
+    static uint32_t maxColor = fashionBrightness;
     static int dec;
     static int inc;
 
     if(modeFirstRun) {
-        colors[0] = safetyBrightness;
-        colors[1] = colors[2] = 0;
-        dec=0;
-        inc=1;
+        colors[0] = colors[1] = colors[2] = 0;
+        dec = random(3);
+        inc = (random(2) + dec + 1) % 3;
+        colors[dec] = maxColor;
         fadeOn = modeStartTime;
     }
 
@@ -125,13 +126,14 @@ void colorFade() {
         colors[dec]--;
         colors[inc]++;
         for(int i=0; i<NUMLEDS; i++) {
-            currentLEDvalue[i] = doGamma(colors[0], colors[1], colors[2]);
+            // currentLEDvalue[i] = doGamma(colors[0], colors[1], colors[2]); // RGB
+            currentLEDvalue[i] = doGamma(maxColor - colors[0], maxColor - colors[1], maxColor - colors[2]); // CMY
         }
         if(colors[dec] == 0) {
-            dec = (dec + 1) % 3;
-            inc = (dec + 1) % 3;
+            dec = inc;
+            inc = (random(2) + dec + 1) % 3;
         }
-        fadeOn = timeNow + 15; // fade by one every 5 millis.
+        fadeOn = timeNow + 25; // fade by one every 5 millis.
     }
 }
 
