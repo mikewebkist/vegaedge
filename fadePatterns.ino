@@ -14,9 +14,16 @@ void doFlashing(int flash_type) {
         case 12: johnsonCounter(); break;
         case 13: strobe(); break;
         case 14: goSolid(safetyBrightness); break;
-        case 15: goSolid(fashionBrightness); break;
+        case 15: safeLight(fashionBrightness); break;
         default: state = 99; break;
     }
+}
+
+void safeLight(byte brightness) {
+    for(int i=0; i<NUMLEDS; i++) {
+        currentLEDvalue[i] = doGamma(brightness, 0, 0);
+    }
+    delay(3);
 }
 
 void goSolid(byte brightness) {
@@ -108,7 +115,7 @@ void ledSpin() {
 void colorFade() {
     static long fadeOn;
     static uint32_t colors[3];
-    static uint32_t maxColor = fashionBrightness;
+    static uint32_t maxColor = safetyBrightness;
     static int dec;
     static int inc;
 
@@ -126,8 +133,11 @@ void colorFade() {
         colors[dec]--;
         colors[inc]++;
         for(int i=0; i<NUMLEDS; i++) {
-            // currentLEDvalue[i] = doGamma(colors[0], colors[1], colors[2]); // RGB
-            currentLEDvalue[i] = doGamma(maxColor - colors[0], maxColor - colors[1], maxColor - colors[2]); // CMY
+            // if (i < (NUMLEDS / 2)) {
+                // currentLEDvalue[i] = doGamma(colors[0], colors[1], colors[2]); // RGB
+            // } else {
+                currentLEDvalue[i] = doGamma(maxColor - colors[0], maxColor - colors[1], maxColor - colors[2]); // CMY
+            // }
         }
         if(colors[dec] == 0) {
             dec = inc;

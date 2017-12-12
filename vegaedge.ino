@@ -35,7 +35,7 @@ const long sleepAfterSecs = 4 * 60 * 60; // 4 hours..
 boolean buttonState;             // the current reading from the input pin
 
 // Things to remember
-int state = 2; // What state of the program are we in?
+int state = 15; // What state of the program are we in?
 int pressed = 0;
 int firstPressedTime;    // how long ago was the button pressed?
 uint32_t currentLEDvalue[NUMLEDS];
